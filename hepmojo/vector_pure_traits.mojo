@@ -10,6 +10,74 @@ from .constants import pi
 # alias type = DType.float32
 # alias type1 = Float32
 
+trait vector_trait:
+    fn __init__(inout self):
+        ...
+    fn __copyinit__(inout self, new: Self):
+        ...
+    fn __moveinit__(inout self, owned existing: Self):
+        ...
+    fn __getitem__(inout self, index:Int) -> Scalar[dtype]:
+        ...
+    fn __setitem__(inout self, index:Int, value:Scalar[dtype]):
+        ...
+    fn __del__(owned self):
+        ...
+    fn __len__(self) -> Int:
+        ...
+    fn __int__(self) -> Int:
+        ...
+    fn __str__(inout self) -> String:
+        ...
+    fn __repr__(inout self) -> String:
+        ...
+    fn __pos__(inout self) -> Self:
+        ...
+    fn __neg__(inout self) -> Self:
+        ...
+    fn __eq__(self, other: Self) -> Bool:
+        ...
+    fn __add__(inout self, other:Scalar[dtype]) -> Self:
+        ...
+    fn __add__(inout self, other:Self) -> Self:
+        ...
+    fn __radd__(inout self, s: Scalar[dtype])->Self:
+        ...
+    fn __iadd__(inout self, s: Scalar[dtype]):
+        ...
+    fn __sub__(inout self, other:Scalar[dtype]) -> Self:
+        ...
+    fn __sub__(inout self, other:Self) -> Self:
+        ...
+    fn __rsub__(inout self, s: Scalar[dtype]) -> Self:
+        ...
+    fn __isub__(inout self, s: Scalar[dtype]):
+        ...
+    fn __mul__(self, s: Scalar[dtype])->Self:
+        ...
+    fn __mul__(self, other: Self)->Self:
+        ...
+    fn __rmul__(self, s: Scalar[dtype])->Self:
+        ...
+    fn __imul__(inout self, s: Scalar[dtype]):
+        ...
+    fn __truediv__(self, s: Scalar[dtype])->Self:
+        ...
+    fn __truediv__(self, other: Self)->Self:
+        ...
+    fn __rtruediv__(self, s: Scalar[dtype])->Self:
+        ...
+    fn __itruediv__(inout self, s: Scalar[dtype]):
+        ...
+    fn __itruediv__(inout self, other: Self):
+        ...
+    fn __pow__(self, p: Int)->Self:
+        ...
+    fn __ipow__(inout self, p: Int):
+        ...
+    fn __matmul__(inout self, other:Self) -> Scalar[dtype]:
+        ...
+
 # TODO: removed 'Stringable' trait for now since it seems to not recognize __str__ method for some reason.
 struct Vector3D[dtype: DType = DType.float64](
     Intable, CollectionElement, Sized
@@ -53,7 +121,7 @@ struct Vector3D[dtype: DType = DType.float64](
         self._ptr = existing._ptr
         existing._ptr = DTypePointer[dtype]()
 
-    fn __getitem__(inout self, index:Int) -> Scalar[dtype]:
+    fn __getitem__(self, index:Int) -> Scalar[dtype]:
         return self._ptr.load[width=1](index)
 
     fn __setitem__(inout self, index:Int, value:Scalar[dtype]):
@@ -412,5 +480,205 @@ struct Vector3D[dtype: DType = DType.float64](
     fn isperpendicular(inout self, inout other:Self) -> Bool:
         return self.cos_angle(other) == 0.0
 
-# struct LorentzVector3D(Vector3D):
+struct LorentzVector[dtype: DType = DType.float64](
+    Intable, CollectionElement, Sized
+    ):
+    var _ptr: DTypePointer[dtype]
+    var _size: Int
 
+    fn __init__(inout self, *data:Scalar[dtype]):
+        self._size = 4
+        self._ptr = DTypePointer[dtype].alloc(self._size)
+        memset_zero(self._ptr, self._size)
+
+    fn __init__(inout self, vector3d:Vector3D[dtype], t:Scalar[dtype]):
+        self._size = 4
+        self._ptr = DTypePointer[dtype].alloc(self._size)
+        self._ptr[0] = vector3d[0]
+        self._ptr[1] = vector3d[1]
+        self._ptr[2] = vector3d[2]
+        self._ptr[3] = t
+
+    fn __str__(self) -> String:
+        return "("+str(self._ptr[0])+", "+str(self._ptr[1])+", "+str(self._ptr[2])+", "+str(self._ptr[3])+")"
+
+    fn __copyinit__(inout self, new: Self):
+        self._size = new._size
+        self._ptr = new._ptr
+
+    fn __moveinit__(inout self, owned existing: Self):
+        self._size = existing._size
+        self._ptr = existing._ptr
+        existing._size = 0
+        existing._ptr = DTypePointer[dtype]()
+
+    fn __getitem__(inout self, index:Int) -> Scalar[dtype]:
+        return self._ptr.load[width=1](index)
+
+    fn __setitem__(inout self, index:Int, value:Scalar[dtype]):
+        self._ptr.store[width=1](index, value)
+
+    fn __del__(owned self):
+        self._ptr.free()
+
+    fn __len__(self) -> Int:
+        return self._size
+
+    fn __int__(self) -> Int:
+        return self._size
+
+    # fn __str__(inout self) -> String:
+    #     var printStr:String = "["
+    #     var prec:Int=4
+    #     for i in range(self._size):
+    #         var val = self[i]
+    #         @parameter
+    #         if _mlirtype_is_eq[Scalar[dtype], Float64]():
+    #             var s: String = ""
+    #             var int_str: String
+    #             int_str = String(trunc(val).cast[DType.int32]())
+    #             if val < 0.0:
+    #                 val = -val
+    #             var float_str: String
+    #             if math.mod(val,1)==0:
+    #                 float_str = "0"
+    #             else:
+    #                 float_str = String(mod(val,1))[2:prec+2]
+    #             s = int_str+"."+float_str
+    #             if i==0:
+    #                 printStr+=s
+    #             else:
+    #                 printStr+="  "+s
+    #         else:
+    #             if i==0:
+    #                 printStr+=str(val)
+    #             else:
+    #                 printStr+="  "+str(val)
+
+    #     printStr+="]\n"
+    #     printStr+="Length:"+str(self._size)+","+" DType:"+str(dtype)
+    #     return printStr
+
+    fn __repr__(inout self) -> String:
+        return "LorentzVector(x="+str(self._ptr[0])+", y="+str(self._ptr[1])+", z="+str(self._ptr[2])+", t="+str(self._ptr[3])+")"
+
+    # TODO: Implement iterator for Vector3D, I am not sure how to end the loop in __next__ method.
+    # fn __iter__(inout self) -> Self:
+    #     self.index = -1
+    #     return self
+
+    # fn __next__(inout self) -> Scalar[dtype]:
+    #     self.index += 1
+    #     if self.index == self._size:
+    #         # return Optional[Scalar[dtype]]()
+    #         return Scalar[dtype]()
+    #     else:
+    #         return self._ptr[self.index]
+
+    fn __pos__(inout self) -> Self:
+        return self*(1.0)
+
+    fn __neg__(inout self) -> Self:
+        return self*(-1.0)
+
+    fn __eq__(self, other: Self) -> Bool:
+        return self._ptr == other._ptr
+
+    # ARITHMETICS
+    fn _elementwise_scalar_arithmetic[func: fn[dtype: DType, width: Int](SIMD[dtype, width],SIMD[dtype, width])->SIMD[dtype, width]](self, s: Scalar[dtype]) -> Self:
+        alias simd_width: Int = simdwidthof[dtype]()
+        var new_array = Self(self._size)
+        @parameter
+        fn elemwise_vectorize[simd_width: Int](idx: Int) -> None:
+            new_array._ptr.store[width=simd_width](idx, func[dtype, simd_width](SIMD[dtype, simd_width](s), self._ptr.load[width=simd_width](idx)))
+        vectorize[elemwise_vectorize, simd_width](self._size)
+        return new_array
+
+    fn _elementwise_array_arithmetic[func: fn[dtype: DType, width: Int](SIMD[dtype, width],SIMD[dtype, width])->SIMD[dtype, width]](self, other: Self) -> Self:
+        alias simd_width = simdwidthof[dtype]()
+        var new_vec = Self()
+        @parameter
+        fn vectorized_arithmetic[simd_width:Int](index: Int) -> None:
+            new_vec._ptr.store[width=simd_width](index, func[dtype, simd_width](self._ptr.load[width=simd_width](index), other._ptr.load[width=simd_width](index)))
+
+        vectorize[vectorized_arithmetic, simd_width](self._size)
+        return new_vec
+
+    fn __add__(inout self, other:Scalar[dtype]) -> Self:
+        return self._elementwise_scalar_arithmetic[add](other)
+
+    fn __add__(inout self, other:Self) -> Self:
+        return self._elementwise_array_arithmetic[add](other)
+
+    fn __radd__(inout self, s: Scalar[dtype])->Self:
+        return self + s
+
+    fn __iadd__(inout self, s: Scalar[dtype]):
+        self = self + s
+
+    fn _sub__(inout self, other:Scalar[dtype]) -> Self:
+        return self._elementwise_scalar_arithmetic[sub](other)
+
+    fn __sub__(inout self, other:Self) -> Self:
+        return self._elementwise_array_arithmetic[sub](other)
+
+    # TODO: I don't know why I am getting error here, so do this later.
+    # fn __rsub__(inout self, s: Scalar[dtype])->Self:
+    #     return -(self - s)
+
+    fn __isub__(inout self, s: Scalar[dtype]):
+        self = self-s
+
+    fn __mul__(self, s: Scalar[dtype])->Self:
+        return self._elementwise_scalar_arithmetic[mul](s)
+
+    fn __mul__(self, other: Self)->Self:
+        return self._elementwise_array_arithmetic[mul](other)
+
+    fn __rmul__(self, s: Scalar[dtype])->Self:
+        return self*s
+
+    fn __imul__(inout self, s: Scalar[dtype]):
+        self = self*s
+
+    fn _reduce_sum(self) -> Scalar[dtype]:
+        var reduced = Scalar[dtype](0.0)
+        alias simd_width: Int = simdwidthof[dtype]()
+        @parameter
+        fn vectorize_reduce[simd_width: Int](idx: Int) -> None:
+            reduced[0] += self._ptr.load[width = simd_width](idx).reduce_add()
+        vectorize[vectorize_reduce, simd_width](self._size)
+        return reduced
+
+    fn __matmul__(inout self, other:Self) -> Scalar[dtype]:
+        return self._elementwise_array_arithmetic[mul](other)._reduce_sum()
+
+    fn __pow__(self, p: Int)->Self:
+        return self._elementwise_pow(p)
+
+    fn __ipow__(inout self, p: Int):
+        self = self.__pow__(p)
+
+    fn _elementwise_pow(self, p: Int) -> Self:
+        alias simd_width: Int = simdwidthof[dtype]()
+        var new_vec = Self(self._size)
+        @parameter
+        fn tensor_scalar_vectorize[simd_width: Int](idx: Int) -> None:
+            new_vec._ptr.store[width=simd_width](idx, math.pow(self._ptr.load[width=simd_width](idx), p))
+        vectorize[tensor_scalar_vectorize, simd_width](self._size)
+        return new_vec
+
+    fn __truediv__(inout self, s: Scalar[dtype]) -> Self:
+        return self._elementwise_scalar_arithmetic[div](s)
+
+    fn __truediv__(inout self, other:Self) -> Self:
+        return self._elementwise_array_arithmetic[div](other)
+
+    fn __itruediv__(inout self, s: Scalar[dtype]):
+        self = self.__truediv__(s)
+
+    fn __itruediv__(inout self, other:Self):
+        self = self.__truediv__(other)
+
+    fn __rtruediv__(inout self, s: Scalar[dtype]) -> Self:
+        return self.__truediv__(s)
