@@ -77,7 +77,7 @@ trait vector_trait:
 
 # TODO: removed 'Stringable' trait for now since it seems to not recognize __str__ method for some reason.
 struct Vector3D[dtype: DType = DType.float64](
-    Intable, CollectionElement, Sized
+    Intable, CollectionElement, Sized, Stringable
     ):
     var _ptr: DTypePointer[dtype]
     var _size: Int
@@ -125,7 +125,7 @@ struct Vector3D[dtype: DType = DType.float64](
     fn __int__(self) -> Int:
         return self._size
 
-    fn __str__(inout self) -> String:
+    fn __str__(self) -> String:
         var printStr:String = "["
         var prec:Int=4
         for i in range(self._size):
@@ -156,6 +156,10 @@ struct Vector3D[dtype: DType = DType.float64](
         printStr+="]\n"
         printStr+="Length:"+str(self._size)+","+" DType:"+str(dtype)
         return printStr
+
+    fn print(self) -> None:
+        print(self.__str__() + "\n")
+        print()
 
     fn __repr__(inout self) -> String:
         return "Vector3D(x="+str(self._ptr[0])+", y="+str(self._ptr[1])+", z="+str(self._ptr[2])+")"
@@ -315,10 +319,6 @@ struct Vector3D[dtype: DType = DType.float64](
         else: # TODO: mayeb implement errors properly using inbulit error class
             print("Error: Length of iterable must be 3")
             return None
-
-    @staticmethod
-    fn fromvector(iterable: vector[Scalar[dtype]]) -> Self:
-        return Self(iterable[0], iterable[1], iterable[2])
 
     # * PROPERTIES
     # TODO : Implement @property decorator for x,y,z once available in Mojo
