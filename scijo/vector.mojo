@@ -7,8 +7,73 @@ from algorithm import vectorize
 from math import add, sub, mul, div, sin, cos, sqrt, acos, atan2, mod, trunc
 from .constants import pi
 
-# alias type = DType.float32
-# alias type1 = Float32
+trait vector_trait:
+    fn __init__(inout self):
+        ...
+    fn __copyinit__(inout self, new: Self):
+        ...
+    fn __moveinit__(inout self, owned existing: Self):
+        ...
+    fn __getitem__(inout self, index:Int) -> Scalar[dtype]:
+        ...
+    fn __setitem__(inout self, index:Int, value:Scalar[dtype]):
+        ...
+    fn __del__(owned self):
+        ...
+    fn __len__(self) -> Int:
+        ...
+    fn __int__(self) -> Int:
+        ...
+    fn __str__(inout self) -> String:
+        ...
+    fn __repr__(inout self) -> String:
+        ...
+    fn __pos__(inout self) -> Self:
+        ...
+    fn __neg__(inout self) -> Self:
+        ...
+    fn __eq__(self, other: Self) -> Bool:
+        ...
+    fn __add__(inout self, other:Scalar[dtype]) -> Self:
+        ...
+    fn __add__(inout self, other:Self) -> Self:
+        ...
+    fn __radd__(inout self, s: Scalar[dtype])->Self:
+        ...
+    fn __iadd__(inout self, s: Scalar[dtype]):
+        ...
+    fn __sub__(inout self, other:Scalar[dtype]) -> Self:
+        ...
+    fn __sub__(inout self, other:Self) -> Self:
+        ...
+    fn __rsub__(inout self, s: Scalar[dtype]) -> Self:
+        ...
+    fn __isub__(inout self, s: Scalar[dtype]):
+        ...
+    fn __mul__(self, s: Scalar[dtype])->Self:
+        ...
+    fn __mul__(self, other: Self)->Self:
+        ...
+    fn __rmul__(self, s: Scalar[dtype])->Self:
+        ...
+    fn __imul__(inout self, s: Scalar[dtype]):
+        ...
+    fn __truediv__(self, s: Scalar[dtype])->Self:
+        ...
+    fn __truediv__(self, other: Self)->Self:
+        ...
+    fn __rtruediv__(self, s: Scalar[dtype])->Self:
+        ...
+    fn __itruediv__(inout self, s: Scalar[dtype]):
+        ...
+    fn __itruediv__(inout self, other: Self):
+        ...
+    fn __pow__(self, p: Int)->Self:
+        ...
+    fn __ipow__(inout self, p: Int):
+        ...
+    fn __matmul__(inout self, other:Self) -> Scalar[dtype]:
+        ...
 
 # TODO: removed 'Stringable' trait for now since it seems to not recognize __str__ method for some reason.
 struct Vector3D[dtype: DType = DType.float64](
@@ -16,21 +81,17 @@ struct Vector3D[dtype: DType = DType.float64](
     ):
     var _ptr: DTypePointer[dtype]
     var _size: Int
-    var index: Int
 
     # Constructors
     # * I need to figure out how to assign the datatype given by user if possible
     fn __init__(inout self):
         # default constructor
         self._size = 3
-        self.index = -1
-
         self._ptr =  DTypePointer[dtype].alloc(self._size)
         memset_zero(self._ptr, self._size)
 
     fn __init__(inout self, *data:Scalar[dtype]):
         self._size = 3
-        self.index = -1
 
         self._ptr = DTypePointer[dtype].alloc(self._size)
         for i in range(self._size):
@@ -38,22 +99,18 @@ struct Vector3D[dtype: DType = DType.float64](
 
     fn __init__(inout self, _ptr: DTypePointer[dtype]):
         self._size = 3
-        self.index = -1
-
         self._ptr = _ptr
 
     fn __copyinit__(inout self, new: Self):
         self._size = new._size
         self._ptr = new._ptr
-        self.index = new.index
 
     fn __moveinit__(inout self, owned existing: Self):
         self._size = existing._size
-        self.index = existing.index
         self._ptr = existing._ptr
         existing._ptr = DTypePointer[dtype]()
 
-    fn __getitem__(inout self, index:Int) -> Scalar[dtype]:
+    fn __getitem__(self, index:Int) -> Scalar[dtype]:
         return self._ptr.load[width=1](index)
 
     fn __setitem__(inout self, index:Int, value:Scalar[dtype]):
@@ -411,6 +468,4 @@ struct Vector3D[dtype: DType = DType.float64](
 
     fn isperpendicular(inout self, inout other:Self) -> Bool:
         return self.cos_angle(other) == 0.0
-
-# struct LorentzVector3D(Vector3D):
 
