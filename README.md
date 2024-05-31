@@ -20,7 +20,7 @@ Clone the repository
 
 ## Usage
 
-Since SciJo is very early in development, there's not much documentation. I will try to write a proper documentation soon. Please go through the code to understand all the available options. 
+Since SciJo is very early in development, there's not much documentation. I will try to write a proper documentation soon. Please go through the code to understand all the available options. Following is a simple example, Please take a look at doc.mojo file for syntax and options available (Only Vector3D for now).swswsswsssswww
 
 ```
 from scijo import Vector3D, LorentzVector
