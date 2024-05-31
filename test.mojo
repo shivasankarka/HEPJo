@@ -4,7 +4,8 @@ from collections.vector import InlinedFixedVector
 
 from testing import assert_equal
 from scijo import Vector3D, LorentzVector
-import scijo as sj
+# import scijo as s
+import math
 
 fn main() raises:
     # assert_equal[SIMD[DType.float32]](1.0, 1.0, msg="true")
@@ -17,10 +18,12 @@ fn main() raises:
 
     var v1 = Vector3D[DType.float32].frompoint(0.0,3.0,4.0)
     var v2 = Vector3D.fromvector(v1)
-    var v3 = v1 + v2
+    var v3 = v1*v2
+    var v5 = v1.act[math.exp]()
     print(v3)
-    var v4 = sj.sin[DType.float32](v1)
-    print(v4)
+    print(v5)
+    # var v4 = sj.sin[DType.float32](v1)
+    # print(v4)
 
     # var arr3 = LorentzVector(1.0, 2.0, 3.0, 10.0)
     # var boostvec = arr3.boostvector()

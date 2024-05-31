@@ -13,3 +13,12 @@ alias J_to_eV:Float64 = 1/eV_to_J
 
 # TODO : maybe implement functions that can convert between natural units and SI.
 
+# struct constants[dtype: Dtype]:
+#     var pi: Scalar[dtype]
+#     var e: Scalar[dtype]
+#     var h: Scalar[dtype]
+#     var c: Scalar[dtype]
+#     var avogadro: Scalar[dtype] 
+#     var boltzmann: Scalar[dtype]
+
+#     fn __init__(inout self):

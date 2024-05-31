@@ -187,25 +187,7 @@ struct Vector3D[dtype: DType = DType.float64](
         return self._ptr == other._ptr
 
     # ARITHMETICS
-    fn _elementwise_scalar_arithmetic[func: fn[dtype: DType, width: Int](SIMD[dtype, width],SIMD[dtype, width])->SIMD[dtype, width]](self, s: Scalar[dtype]) -> Self:
-        alias simd_width: Int = simdwidthof[dtype]()
-        var new_array = Self(self._size)
-        @parameter
-        fn elemwise_vectorize[simd_width: Int](idx: Int) -> None:
-            new_array._ptr.store[width=simd_width](idx, func[dtype, simd_width](SIMD[dtype, simd_width](s), self._ptr.load[width=simd_width](idx)))
-        vectorize[elemwise_vectorize, simd_width](self._size)
-        return new_array
-
-    fn _elementwise_array_arithmetic[func: fn[dtype: DType, width: Int](SIMD[dtype, width],SIMD[dtype, width])->SIMD[dtype, width]](self, other: Self) -> Self:
-        alias simd_width = simdwidthof[dtype]()
-        var new_vec = Self()
-        @parameter
-        fn vectorized_arithmetic[simd_width:Int](index: Int) -> None:
-            new_vec._ptr.store[width=simd_width](index, func[dtype, simd_width](self._ptr.load[width=simd_width](index), other._ptr.load[width=simd_width](index)))
-
-        vectorize[vectorized_arithmetic, simd_width](self._size)
-        return new_vec
-
+    
     fn __add__(inout self, other:Scalar[dtype]) -> Self:
         return self._elementwise_scalar_arithmetic[add](other)
 
@@ -242,15 +224,6 @@ struct Vector3D[dtype: DType = DType.float64](
 
     fn __imul__(inout self, s: Scalar[dtype]):
         self = self*s
-
-    fn _reduce_sum(self) -> Scalar[dtype]:
-        var reduced = Scalar[dtype](0.0)
-        alias simd_width: Int = simdwidthof[dtype]()
-        @parameter
-        fn vectorize_reduce[simd_width: Int](idx: Int) -> None:
-            reduced[0] += self._ptr.load[width = simd_width](idx).reduce_add()
-        vectorize[vectorize_reduce, simd_width](self._size)
-        return reduced
 
     fn __matmul__(inout self, other:Self) -> Scalar[dtype]:
         return self._elementwise_array_arithmetic[mul](other)._reduce_sum()
@@ -323,40 +296,109 @@ struct Vector3D[dtype: DType = DType.float64](
     # * PROPERTIES
     # TODO : Implement @property decorator for x,y,z once available in Mojo
     fn x(inout self, x:Scalar[dtype]):
+        """
+        Sets the x-component of the vector.
+
+        Parameters:
+            x: The new value for the x-component.
+        """
         self._ptr[0] = x
 
     fn x(inout self) -> Scalar[dtype]:
+        """
+        Returns the x-component of the vector.
+
+        Returns:
+            The value of the x-component.
+        """
         return self._ptr[0]
 
     fn y(inout self, y:Scalar[dtype]):
+        """
+        Sets the y-component of the vector.
+
+        Parameters:
+            y: The new value for the y-component.
+        """
         self._ptr[1] = y
 
     fn y(inout self) -> Scalar[dtype]:
+        """
+        Returns the y-component of the vector.
+
+        Returns:
+            The value of the y-component.
+        """
         return self._ptr[1]
 
     fn z(inout self, z:Scalar[dtype]):
+        """
+        Sets the z-component of the vector.
+
+        Parameters:
+            z: The new value for the z-component.
+        """
         self._ptr[2] = z
 
     fn z(inout self) -> Scalar[dtype]:
+        """
+        Returns the z-component of the vector.
+
+        Returns:
+            The value of the z-component.
+        """
         return self._ptr[2]
 
     # TODO: Implement @property decorator
     fn rho(inout self) -> Scalar[dtype]:
+        """
+        Calculates the radial distance in the xy-plane (rho).
+
+        Returns:
+            The radial distance rho, calculated as sqrt(x^2 + y^2).
+        """
         return sqrt(self.x()**2 + self.y()**2)
 
     fn mag(inout self) -> Scalar[dtype]:
+        """
+        Calculates the magnitude (or length) of the vector.
+
+        Returns:
+            The magnitude of the vector, calculated as sqrt(x^2 + y^2 + z^2).
+        """
         return sqrt(self._ptr[0]**2 + self._ptr[1]**2 + self._ptr[2]**2)
 
     fn r(inout self) -> Scalar[dtype]:
+        """
+        Alias for the magnitude of the vector.
+
+        Returns:
+            The magnitude of the vector.
+        """
         return self.mag()
 
     fn costheta(inout self) -> Scalar[dtype]:
+        """
+        Calculates the cosine of the angle theta between the vector and the z-axis.
+
+        Returns:
+            The cosine of angle theta. Returns 1.0 if the vector's magnitude is zero.
+        """
         if self.mag() == 0.0:
             return 1.0
         else:
             return self._ptr[2]/self.mag()
 
     fn theta(inout self, degree:Bool=False) -> Scalar[dtype]:
+        """
+        Calculates the angle theta between the vector and the z-axis.
+
+        Parameters:
+            degree: If True, returns the angle in degrees, otherwise in radians.
+
+        Returns:
+            The angle theta in radians or degrees.
+        """
         var theta = acos(self.costheta())
         if degree == True:
             return theta * 180 / Scalar[dtype](pi)
@@ -364,31 +406,74 @@ struct Vector3D[dtype: DType = DType.float64](
             return theta
 
     fn phi(inout self, degree:Bool=False) -> Scalar[dtype]:
+        """
+        Calculates the angle phi in the xy-plane from the positive x-axis.
+
+        Parameters:
+            degree: If True, returns the angle in degrees, otherwise in radians.
+
+        Returns:
+            The angle phi in radians or degrees.
+        """
         var phi = atan2(self._ptr[1], self._ptr[0])
         if degree == True:
-            return phi * 180 / Scalar[dtype](pi)
-        else:
-            return phi
-
+         
     fn set(inout self, x:Scalar[dtype], y:Scalar[dtype], z:Scalar[dtype]):
+        """
+        Sets the vector components to the specified values.
+
+        Parameters:
+            x: The new value for the x-component.
+            y: The new value for the y-component.
+            z: The new value for the z-component.
+        """
         self._ptr[0] = x
         self._ptr[1] = y
         self._ptr[2] = z
 
     fn tolist(self) -> List[Scalar[dtype]]:
+        """
+        Converts the vector components to a list.
+
+        Returns:
+            A list containing the scalar components of the vector.
+        """
         return List[Scalar[dtype]](self._ptr[0], self._ptr[1], self._ptr[2])
 
     fn mag2(self) -> Scalar[dtype]:
+        """
+        Calculates the squared magnitude of the vector.
+
+        Returns:
+            The squared magnitude of the vector.
+        """
         return self._ptr[0]**2 + self._ptr[1]**2 + self._ptr[2]**2
 
     fn __abs__(inout self) -> Scalar[dtype]:
+        """
+        Calculates the magnitude of the vector.
+
+        Returns:
+            The magnitude of the vector.
+        """
         return self.mag()
 
-    # * think if inout should be added here since I need to create a new copy and return it
     fn copy(inout self) -> Self:
+        """
+        Creates a copy of the vector.
+
+        Returns:
+            A new instance of the vector with the same components.
+        """
         return Self(self._ptr[0], self._ptr[1], self._ptr[2])
 
     fn unit(inout self) -> Self:
+        """
+        Normalizes the vector to a unit vector.
+
+        Returns:
+            A new vector with a magnitude of 1, pointing in the same direction as the original vector.
+        """
         var mag_temp = self.mag()
         if mag_temp == 1.0:
             return self
@@ -396,16 +481,45 @@ struct Vector3D[dtype: DType = DType.float64](
             return Self(self._ptr[0]/mag_temp, self._ptr[1]/mag_temp, self._ptr[2]/mag_temp)
 
     fn __nonzero__(inout self) -> Bool:
+        """
+        Checks if the vector is non-zero.
+
+        Returns:
+            True if the vector is non-zero, False otherwise.
+        """
         return self.mag() != 0.0
 
     fn __bool__(inout self) -> Bool:
+        """
+        Converts the vector's non-zero status to a boolean.
+
+        Returns:
+            True if the vector is non-zero, False otherwise.
+        """
         return self.__nonzero__()
 
-    # * I have defined dot product using matmul above i.e a@b defined the dot product, this is extra synctatic sugar, maybe remove later.
     fn dot(self, other: Self) -> Scalar[dtype]:
+        """
+        Computes the dot product of this vector with another vector.
+
+        Parameters:
+            other: The other vector to dot with.
+
+        Returns:
+            The scalar dot product of the two vectors.
+        """
         return self._elementwise_array_arithmetic[mul](other)._reduce_sum()
 
     fn cross(self, other: Self) -> Self:
+        """
+        Computes the cross product of this vector with another vector.
+
+        Parameters:
+            other: The other vector to cross with.
+
+        Returns:
+            A new vector that is the cross product of this vector and the other vector.
+        """
         return Self(self._ptr[1]*other._ptr[2] - self._ptr[2]*other._ptr[1],
                     self._ptr[2]*other._ptr[0] - self._ptr[0]*other._ptr[2],
                     self._ptr[0]*other._ptr[1] - self._ptr[1]*other._ptr[0])
@@ -431,6 +545,12 @@ struct Vector3D[dtype: DType = DType.float64](
         self._ptr[2] = z_new
 
     fn rotate_x(inout self, angle: Scalar[dtype]):
+        """
+        Rotates the vector around the X-axis by the specified angle.
+        
+        Parameters:
+            angle: The angle in radians by which to rotate the vector around the X-axis.
+        """
         var x_new = self._ptr[0]
         var y_new = self._ptr[1]*cos(angle) - self._ptr[2]*sin(angle)
         var z_new = self._ptr[1]*sin(angle) + self._ptr[2]*cos(angle)
@@ -440,6 +560,12 @@ struct Vector3D[dtype: DType = DType.float64](
         self._ptr[2] = z_new
 
     fn rotate_y(inout self, angle: Scalar[dtype]):
+        """
+        Rotates the vector around the Y-axis by the specified angle.
+        
+        Parameters:
+            angle: The angle in radians by which to rotate the vector around the Y-axis.
+        """
         var x_new = self._ptr[0]*cos(angle) + self._ptr[2]*sin(angle)
         var y_new = self._ptr[1]
         var z_new = -self._ptr[0]*sin(angle) + self._ptr[2]*cos(angle)
@@ -449,23 +575,172 @@ struct Vector3D[dtype: DType = DType.float64](
         self._ptr[2] = z_new
 
     fn rotate_z(inout self, angle: Scalar[dtype]):
+        """
+        Rotates the vector around the Z-axis by the specified angle.
+        
+        Parameters:
+            angle: The angle in radians by which to rotate the vector around the Z-axis.
+        """
         var x_new = self._ptr[0]*cos(angle) - self._ptr[1]*sin(angle)
         var y_new = self._ptr[0]*sin(angle) + self._ptr[1]*cos(angle)
         var z_new = self._ptr[2]
 
-
     fn cos_angle(inout self, inout other:Self) -> Scalar[dtype]:
+        """
+        Computes the cosine of the angle between this vector and another vector.
+        
+        Parameters:
+            other: The other vector with which to compute the cosine of the angle.
+        
+        Returns:
+            The cosine of the angle between the two vectors.
+        """
         return self.dot(other)/(self.mag()*other.mag())
 
     fn angle(inout self, inout other:Self) -> Scalar[dtype]:
+        """
+        Computes the angle in radians between this vector and another vector.
+        
+        Parameters:
+            other: The other vector with which to compute the angle.
+        
+        Returns:
+            The angle in radians between the two vectors.
+        """
         return acos(self.cos_angle(other))
 
     fn isparallel(inout self, inout other:Self) -> Bool:
+        """
+        Determines if this vector is parallel to another vector.
+        
+        Parameters:
+            other: The other vector to compare with.
+        
+        Returns:
+            True if the vectors are parallel, False otherwise.
+        """
         return self.cos_angle(other) == 1.0
 
     fn isantiparallel(inout self, inout other:Self) -> Bool:
+        """
+        Determines if this vector is antiparallel to another vector.
+        
+        Parameters:
+            other: The other vector to compare with.
+        
+        Returns:
+            True if the vectors are antiparallel, False otherwise.
+        """
         return self.cos_angle(other) == -1.0
 
     fn isperpendicular(inout self, inout other:Self) -> Bool:
+        """
+        Determines if this vector is perpendicular to another vector.
+        
+        Parameters:
+            other: The other vector to compare with.
+        
+        Returns:
+            True if the vectors are perpendicular, False otherwise.
+        """
         return self.cos_angle(other) == 0.0
 
+    # VECTORIZED MATH OPERATIONS ON VECTOR3D
+    fn _elementwise_scalar_arithmetic[func: fn[dtype: DType, width: Int](SIMD[dtype, width],SIMD[dtype, width])->SIMD[dtype, width]](self, s: Scalar[dtype]) -> Self:
+        """
+        Performs an element-wise scalar arithmetic operation on this vector using SIMD. 
+        This function applies a specified arithmetic operation to each element of the vector 
+        in conjunction with a scalar value such as 
+            self + s
+            self - s
+            self * s
+            self / s
+        Parameters:
+            func: A function that specifies the arithmetic operation to be performed. It takes two SIMD arguments and returns a SIMD result.
+            s: The scalar value to be used in the operation. This scalar is broadcast to match the dimensions of the vector elements.
+
+        Returns:
+            A new instance of the vector where each element is the result of applying the arithmetic operation between the scalar `s` and the corresponding element of the original vector.
+        """
+        alias simd_width: Int = simdwidthof[dtype]()
+        var new_array = Self(self._size)
+        @parameter
+        fn elemwise_vectorize[simd_width: Int](idx: Int) -> None:
+            new_array._ptr.store[width=simd_width](idx, func[dtype, simd_width](SIMD[dtype, simd_width](s), self._ptr.load[width=simd_width](idx)))
+        vectorize[elemwise_vectorize, simd_width](self._size)
+        return new_array
+
+    
+    fn _elementwise_array_arithmetic[func: fn[dtype: DType, width: Int](SIMD[dtype, width],SIMD[dtype, width])->SIMD[dtype, width]](self, other: Self) -> Self:
+        """
+        Performs an element-wise arithmetic operation between two vectors using SIMD (Single Instruction, Multiple Data) techniques.
+        
+        This function leverages a provided SIMD-compatible function `func` to perform the specified arithmetic operation on corresponding elements of this vector and another vector `other`.
+        
+        Parameters:
+            func: A function that specifies the arithmetic operation to be performed. It takes two SIMD arguments and returns a SIMD result.
+            other: The other vector involved in the arithmetic operation.
+        
+        Returns:
+            A new vector instance where each element is the result of the arithmetic operation performed on corresponding elements of the two input vectors.
+        """
+        alias simd_width = simdwidthof[dtype]()
+        var new_vec = Self()
+        @parameter
+        fn vectorized_arithmetic[simd_width:Int](index: Int) -> None:
+            new_vec._ptr.store[width=simd_width](index, func[dtype, simd_width](self._ptr.load[width=simd_width](index), other._ptr.load[width=simd_width](index)))
+
+        vectorize[vectorized_arithmetic, simd_width](self._size)
+        return new_vec
+
+    fn _elementwise_function_arithmetic[func: fn[dtype: DType, width: Int](SIMD[dtype, width])->SIMD[dtype, width]](self) -> Self:
+        """
+        Applies a SIMD-compatible function element-wise to this vector.
+        
+        This function takes a SIMD-compatible function `func` that operates on a single SIMD type and applies it to each element of the vector, effectively transforming each element based on the function's logic.
+        
+        Parameters:
+            func: A function that takes a SIMD type and returns a SIMD type, defining the operation to be performed on each element.
+        
+        Returns:
+            A new vector instance where each element is the result of applying `func` to the corresponding element of the original vector.
+        """
+        alias simd_width = simdwidthof[dtype]()
+        var new_vec = Self()
+        @parameter
+        fn vectorized_arithmetic[simd_width:Int](index: Int) -> None:
+            new_vec._ptr.store[width=simd_width](index, func[dtype, simd_width](self._ptr.load[width=simd_width](index)))
+
+        vectorize[vectorized_arithmetic, simd_width](self._size)
+        return new_vec
+
+    fn act[function: fn[type:DType, simd_width:Int](arg: SIMD[type, simd_width]) -> SIMD[type,simd_width]](inout self) -> Self:
+        """
+        Applies a specified SIMD-compatible function to each element of the vector and returns the modified vector.
+        
+        This method acts as a convenient interface to apply a SIMD function across all elements of the vector. The function should take a SIMD type as input and return a SIMD type as output, defining the transformation to be applied to each element. This method internally uses `_elementwise_function_arithmetic` to perform the operation.
+        
+        Parameters:
+            function: A function that takes a SIMD type and returns a SIMD type, specifying the operation to be performed on each element.
+        
+        Returns:
+            A new vector instance where each element has been transformed by the specified function.
+        """
+        return self._elementwise_function_arithmetic[function]()
+
+    fn _reduce_sum(self) -> Scalar[dtype]:
+        """
+        Computes the sum of all elements in the vector using SIMD operations for efficiency.
+        
+        This function performs a reduction operation to sum all elements of the vector. It leverages SIMD capabilities to load and add multiple elements simultaneously, which can significantly speed up the operation on large vectors. The result is a scalar value representing the sum of all elements.
+        
+        Returns:
+            A scalar of type `dtype` representing the sum of all elements in the vector.
+        """
+        var reduced = Scalar[dtype](0.0)
+        alias simd_width: Int = simdwidthof[dtype]()
+        @parameter
+        fn vectorize_reduce[simd_width: Int](idx: Int) -> None:
+            reduced[0] += self._ptr.load[width = simd_width](idx).reduce_add()
+        vectorize[vectorize_reduce, simd_width](self._size)
+        return reduced
