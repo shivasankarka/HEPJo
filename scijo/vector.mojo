@@ -1,10 +1,11 @@
 from builtin.dtype import DType
 from tensor import Tensor, TensorShape
+import math
+
 from sys.intrinsics import _mlirtype_is_eq
 from algorithm.functional import elementwise
 from algorithm import vectorize
 
-from math import add, sub, mul, div, sin, cos, sqrt, acos, atan2, mod, trunc
 from .constants import pi
 
 trait vector_trait:
@@ -74,6 +75,10 @@ trait vector_trait:
         ...
     fn __matmul__(inout self, other:Self) -> Scalar[dtype]:
         ...
+    
+################################################################################################################
+####################################### VECTOR 2D ##############################################################
+################################################################################################################
 
 struct Vector3D[dtype: DType = DType.float64](
     Intable, CollectionElement, Sized, Stringable
@@ -188,10 +193,10 @@ struct Vector3D[dtype: DType = DType.float64](
     # ARITHMETICS
     
     fn __add__(inout self, other:Scalar[dtype]) -> Self:
-        return self._elementwise_scalar_arithmetic[add](other)
+        return self._elementwise_scalar_arithmetic[math.add](other)
 
     fn __add__(inout self, other:Self) -> Self:
-        return self._elementwise_array_arithmetic[add](other)
+        return self._elementwise_array_arithmetic[math.add](other)
 
     fn __radd__(inout self, s: Scalar[dtype])->Self:
         return self + s
@@ -200,10 +205,10 @@ struct Vector3D[dtype: DType = DType.float64](
         self = self + s
 
     fn _sub__(inout self, other:Scalar[dtype]) -> Self:
-        return self._elementwise_scalar_arithmetic[sub](other)
+        return self._elementwise_scalar_arithmetic[math.sub](other)
 
     fn __sub__(inout self, other:Self) -> Self:
-        return self._elementwise_array_arithmetic[sub](other)
+        return self._elementwise_array_arithmetic[math.sub](other)
 
     # TODO: I don't know why I am getting error here, so do this later.
     # fn __rsub__(inout self, s: Scalar[dtype])->Self:
@@ -213,10 +218,10 @@ struct Vector3D[dtype: DType = DType.float64](
         self = self-s
 
     fn __mul__(self, s: Scalar[dtype])->Self:
-        return self._elementwise_scalar_arithmetic[mul](s)
+        return self._elementwise_scalar_arithmetic[math.mul](s)
 
     fn __mul__(self, other: Self)->Self:
-        return self._elementwise_array_arithmetic[mul](other)
+        return self._elementwise_array_arithmetic[math.mul](other)
 
     fn __rmul__(self, s: Scalar[dtype])->Self:
         return self*s
@@ -225,7 +230,7 @@ struct Vector3D[dtype: DType = DType.float64](
         self = self*s
 
     fn __matmul__(inout self, other:Self) -> Scalar[dtype]:
-        return self._elementwise_array_arithmetic[mul](other)._reduce_sum()
+        return self._elementwise_array_arithmetic[math.mul](other)._reduce_sum()
 
     fn __pow__(self, p: Int)->Self:
         return self._elementwise_pow(p)
@@ -243,10 +248,10 @@ struct Vector3D[dtype: DType = DType.float64](
         return new_vec
 
     fn __truediv__(inout self, s: Scalar[dtype]) -> Self:
-        return self._elementwise_scalar_arithmetic[div](s)
+        return self._elementwise_scalar_arithmetic[math.div](s)
 
     fn __truediv__(inout self, other:Self) -> Self:
-        return self._elementwise_array_arithmetic[div](other)
+        return self._elementwise_array_arithmetic[math.div](other)
 
     fn __itruediv__(inout self, s: Scalar[dtype]):
         self = self.__truediv__(s)
@@ -507,7 +512,7 @@ struct Vector3D[dtype: DType = DType.float64](
         Returns:
             The scalar dot product of the two vectors.
         """
-        return self._elementwise_array_arithmetic[mul](other)._reduce_sum()
+        return self._elementwise_array_arithmetic[math.mul](other)._reduce_sum()
 
     fn cross(self, other: Self) -> Self:
         """
@@ -743,9 +748,15 @@ struct Vector3D[dtype: DType = DType.float64](
             reduced[0] += self._ptr.load[width = simd_width](idx).reduce_add()
         vectorize[vectorize_reduce, simd_width](self._size)
         return reduced
+    
+    fn to_tensor(self) -> Tensor[dtype]:
+        var t = Tensor[dtype](self._size)
+        for i in range(self._size):
+            t[i] = self[i]
+        return t
 
 ################################################################################################################
-################################################################################################################
+####################################### VECTOR 2D ##############################################################
 ################################################################################################################
 
 struct Vector2D[dtype: DType = DType.float64](
@@ -861,10 +872,10 @@ struct Vector2D[dtype: DType = DType.float64](
     # ARITHMETICS
     
     fn __add__(inout self, other:Scalar[dtype]) -> Self:
-        return self._elementwise_scalar_arithmetic[add](other)
+        return self._elementwise_scalar_arithmetic[math.add](other)
 
     fn __add__(inout self, other:Self) -> Self:
-        return self._elementwise_array_arithmetic[add](other)
+        return self._elementwise_array_arithmetic[math.add](other)
 
     fn __radd__(inout self, s: Scalar[dtype])->Self:
         return self + s
@@ -873,10 +884,10 @@ struct Vector2D[dtype: DType = DType.float64](
         self = self + s
 
     fn _sub__(inout self, other:Scalar[dtype]) -> Self:
-        return self._elementwise_scalar_arithmetic[sub](other)
+        return self._elementwise_scalar_arithmetic[math.sub](other)
 
     fn __sub__(inout self, other:Self) -> Self:
-        return self._elementwise_array_arithmetic[sub](other)
+        return self._elementwise_array_arithmetic[math.sub](other)
 
     # TODO: I don't know why I am getting error here, so do this later.
     # fn __rsub__(inout self, s: Scalar[dtype])->Self:
@@ -886,10 +897,10 @@ struct Vector2D[dtype: DType = DType.float64](
         self = self-s
 
     fn __mul__(self, s: Scalar[dtype])->Self:
-        return self._elementwise_scalar_arithmetic[mul](s)
+        return self._elementwise_scalar_arithmetic[math.mul](s)
 
     fn __mul__(self, other: Self)->Self:
-        return self._elementwise_array_arithmetic[mul](other)
+        return self._elementwise_array_arithmetic[math.mul](other)
 
     fn __rmul__(self, s: Scalar[dtype])->Self:
         return self*s
@@ -898,7 +909,7 @@ struct Vector2D[dtype: DType = DType.float64](
         self = self*s
 
     fn __matmul__(inout self, other:Self) -> Scalar[dtype]:
-        return self._elementwise_array_arithmetic[mul](other)._reduce_sum()
+        return self._elementwise_array_arithmetic[math.mul](other)._reduce_sum()
 
     fn __pow__(self, p: Int)->Self:
         return self._elementwise_pow(p)
@@ -916,10 +927,10 @@ struct Vector2D[dtype: DType = DType.float64](
         return new_vec
 
     fn __truediv__(inout self, s: Scalar[dtype]) -> Self:
-        return self._elementwise_scalar_arithmetic[div](s)
+        return self._elementwise_scalar_arithmetic[math.div](s)
 
     fn __truediv__(inout self, other:Self) -> Self:
-        return self._elementwise_array_arithmetic[div](other)
+        return self._elementwise_array_arithmetic[math.div](other)
 
     fn __itruediv__(inout self, s: Scalar[dtype]):
         self = self.__truediv__(s)
@@ -1132,7 +1143,7 @@ struct Vector2D[dtype: DType = DType.float64](
         Returns:
             The scalar dot product of the two vectors.
         """
-        return self._elementwise_array_arithmetic[mul](other)._reduce_sum()
+        return self._elementwise_array_arithmetic[math.mul](other)._reduce_sum()
 
     fn cross(self, other: Self) -> Scalar[dtype]:
         """
@@ -1336,3 +1347,13 @@ struct Vector2D[dtype: DType = DType.float64](
             reduced[0] += self._ptr.load[width = simd_width](idx).reduce_add()
         vectorize[vectorize_reduce, simd_width](self._size)
         return reduced
+    
+    fn to_tensor(self) -> Tensor[dtype]:
+        var t = Tensor[dtype](self._size)
+        for i in range(self._size):
+            t[i] = self[i]
+        return t
+
+#####################################################################################
+#####################################################################################
+#####################################################################################
