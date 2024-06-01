@@ -1,13 +1,22 @@
-
+from scijo import *
 
 fn main() raises:
 
     # * Vector2D
-    var v1_2d = Vector2D[DType.float32].frompoint(1.0, 3.0)
-    var v2_2d = Vector2D.fromvector(v1_2d)
-    var v3_mul = v1_2d * v2_2d
+    # var v1_2d = Vector2D[DType.float32].frompoint(1.0, 3.0)
+    # var v2_2d = Vector2D.fromvector(v1_2d)
+    # var v3_mul = v1_2d * v2_2d
+    # print(v3_mul)
+    # print(v1_2d@v2_2d)
+
+    # * Vector3D
+    var v1_3d = Vector3D[DType.float32].frompoint(1.0, 2.0, 3.0)
+    var v2_3d = Vector3D.fromvector(v1_3d)
+    var v3_mul = v1_3d * v2_3d
     print(v3_mul)
-    print(v1_2d@v2_2d)
+    print(v1_3d@v2_3d)
+    var v_tensor = v1_3d.to_tensor()
+    print(v_tensor)
 
     # print(sj.const[DType.float32].e)
     # var v4 = sj.sin[DType.float32](v1)
