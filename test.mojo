@@ -1,4 +1,6 @@
 from scijo import *
+from tensor import Tensor, TensorShape
+from scijo.interpolate import interp1d
 
 fn main() raises:
 
@@ -10,13 +12,29 @@ fn main() raises:
     # print(v1_2d@v2_2d)
 
     # * Vector3D
-    var v1_3d = Vector3D[DType.float32].frompoint(1.0, 2.0, 3.0)
-    var v2_3d = Vector3D.fromvector(v1_3d)
-    var v3_mul = v1_3d * v2_3d
-    print(v3_mul)
-    print(v1_3d@v2_3d)
-    var v_tensor = v1_3d.to_tensor()
-    print(v_tensor)
+    # var v1_3d = Vector3D[DType.float32].frompoint(1.0, 2.0, 3.0)
+    # var v2_3d = Vector3D.fromvector(v1_3d)
+    # var v3_mul = v1_3d * v2_3d
+    # print(v3_mul)
+    # print(v1_3d@v2_3d)
+    # var v_tensor = v1_3d.to_tensor()
+    # print(v_tensor)
+
+    # arrays
+    var x = Tensor[DType.float64](TensorShape(5), List[Float64](1.0,2.0,3.0,4.0,5.0))
+    var y = Tensor[DType.float64](TensorShape(5), List[Float64](3.0,6.0,9.0,12.0,15.0))
+    var xint = Tensor[DType.float64](TensorShape(5), List[Float64](3.0,4.0,5.0,6.0,7.0))
+    var arr3 = interp1d(xint, x, y, method="linear", fill_value="extrapolate")
+    var unsorted = Tensor[DType.float64](TensorShape(5), List[Float64](12.0,2.0,3.0,4.0,5.0))
+    # print(arr3)
+    # print(mean(x))
+    # print(max(x))
+    # print(min(x))
+    # print(binary_sort(unsorted))
+    # print(median(unsorted))
+    # print(mode(unsorted))
+    print("var: ", variance(x))
+    print("var: ", variance(x, mu=mean(x)))
 
     # print(sj.const[DType.float32].e)
     # var v4 = sj.sin[DType.float32](v1)
