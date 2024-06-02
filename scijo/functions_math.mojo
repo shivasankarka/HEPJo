@@ -1,7 +1,7 @@
 from tensor import Tensor
 import math
 
-from algorithm import vectorize
+from algorithm import vectorize, parallelize
 from builtin.dtype import DType
 from testing import assert_raises
 
@@ -57,14 +57,13 @@ from testing import assert_raises
 #######################################################
 ##### VECTORIZED FUNCTIONS WITH TWO INPUT TENSORS ######
 #######################################################
-fn _math_2Tinput_1Toutput[
-    T: DType,
-    func: fn[T: DType, simd_wid: Int] (SIMD[T, simd_wid], SIMD[T, simd_wid]) -> SIMD[T, simd_wid]]
+fn _math_2Tinput_1Toutput[T: DType, func: fn[T: DType, simd_wid: Int] (SIMD[T, simd_wid], SIMD[T, simd_wid]) -> SIMD[T, simd_wid]]
     (t1: Tensor[T], t2: Tensor[T]) raises ->Tensor[T]:
     """
     Takes two tensor input and returns a new tensor with the transformed values with the specified SIMD-compatible function.
 
     Parameters:
+        func: SIMD compatible math function
         T: Dtype of the input and output tensor.
         t1: The first input tensor.
         t2: The second input tensor.
@@ -74,7 +73,7 @@ fn _math_2Tinput_1Toutput[
     """
     if t1.shape() != t2.shape():
         with assert_raises():
-            raise "Shapes don't match, cannot apply the given function"
+            raise Error("Shapes don't match, cannot apply the given function")
 
     var result_tensor: Tensor[T] = Tensor[T](t1.shape())
     alias nelts = simdwidthof[T]()
@@ -121,6 +120,7 @@ fn sub[T:DType](t1: Tensor[T], t2: Tensor[T]) raises ->Tensor[T]:
 #######################################################
 ##### VECTORIZED FUNCTIONS WITH ONE INPUT TENSOR ######
 #######################################################
+# Is it possible to parallelize this by splitting the tensor into some N parts?
 fn _math_1Tinput_1Toutput[T:DType, func: fn[type:DType, simd_w:Int](SIMD[type, simd_w]) -> SIMD[type, simd_w]](tensor: Tensor[T])->Tensor[T]:
     """
     Applies a SIMD-compatible function element-wise to the input tensor and returns a new tensor with the transformed values.
@@ -140,6 +140,29 @@ fn _math_1Tinput_1Toutput[T:DType, func: fn[type:DType, simd_w:Int](SIMD[type, s
     
     vectorize[vectorized, nelts](tensor.num_elements())
     return result_tensor
+
+# fn _math_1Tinput_1Toutput[T:DType, func: fn[type:DType, simd_w:Int](SIMD[type, simd_w]) -> SIMD[type, simd_w]](tensor: Tensor[T])->Tensor[T]:
+    # """
+    # Applies a SIMD-compatible function element-wise to the input tensor and returns a new tensor with the transformed values.
+
+    # Parameters:
+    #     tensor: The input tensor to be transformed.
+    
+    # Returns:
+    #     A new tensor with each element transformed by the specified SIMD-compatible function.
+    # """
+    # var result_tensor: Tensor[T] = Tensor[T]()
+    # alias nelts = simdwidthof[T]()
+
+    # @parameter
+    # fn maybe(m:Int) -> None:
+    #     @parameter
+    #     fn vectorized[simd_width: Int](idx: Int) -> None:
+    #         result_tensor.data().store[width=simd_width](idx, func[T, simd_width](tensor.data().load[width=simd_width](idx)))
+        
+    #     vectorize[vectorized, nelts](tensor.num_elements())
+    # parallelize[maybe]()
+    # return result_tensor
 
 fn acos[T:DType](tensor:Tensor[T])->Tensor[T]:
     return _math_1Tinput_1Toutput[T,math.acos](tensor)
@@ -275,3 +298,4 @@ fn y0[T:DType](tensor:Tensor[T])->Tensor[T]:
 
 fn y1[T:DType](tensor:Tensor[T])->Tensor[T]:
     return _math_1Tinput_1Toutput[T,math.y1](tensor)
+
