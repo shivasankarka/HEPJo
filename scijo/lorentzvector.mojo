@@ -21,7 +21,7 @@ struct LorentzVector[dtype: DType = DType.float64](
         for i in range(self._size):
             self._ptr[i] = data[i]
 
-    fn __init__(inout self, vector3d:Vector3D[dtype], t:Scalar[dtype]):
+    fn __init__(inout self, inout vector3d:Vector3D[dtype], t:Scalar[dtype]) raises:
         self._size = 4
         self._ptr = DTypePointer[dtype].alloc(self._size)
         self._ptr[0] = vector3d[0]
@@ -385,7 +385,7 @@ struct LorentzVector[dtype: DType = DType.float64](
 
     # Implement iter
 
-    fn boost(inout self, args:Vector3D[dtype]) -> Self:  
+    fn boost(inout self, inout args:Vector3D[dtype]) raises -> Self:  
         if len(args) != 3:
             print("Error, it is not a valid vector size")
 
@@ -407,7 +407,7 @@ struct LorentzVector[dtype: DType = DType.float64](
 
         return Self(xp, yp, zp, tp)
 
-    fn boostplus(inout self, args:Vector3D[dtype]) -> Self:  
+    fn boostplus(inout self, inout args:Vector3D[dtype]) raises -> Self:  
         if len(args) != 3:
             print("Error, it is not a valid vector size")
 
@@ -429,7 +429,7 @@ struct LorentzVector[dtype: DType = DType.float64](
 
         return Self(xp, yp, zp, tp)
 
-    fn boostminus(inout self, args:Vector3D[dtype]) -> Self:  
+    fn boostminus(inout self, inout args:Vector3D[dtype]) raises -> Self:  
         if len(args) != 3:
             print("Error, it is not a valid vector size")
 
@@ -472,8 +472,9 @@ struct LorentzVector[dtype: DType = DType.float64](
     fn islightlike(inout self) -> Bool:
         return self.magl2() == 0.0
 
-    fn torestframe(inout self) -> Self:
-        return self.boostplus(self.boostvector())
+    fn torestframe(inout self) raises -> Self:
+        var boost_vec = self.boostvector()
+        return self.boostplus(boost_vec)
     
 
 
