@@ -1,8 +1,72 @@
-from tensor import Tensor
+from tensor import Tensor, TensorShape
 import math
 
 from algorithm import vectorize, parallelize
 from builtin.dtype import DType
+
+# struct pInf[T:DType]():
+#     var value:Scalar[T] 
+
+#     fn __init__(inout self):
+#         self.value = 0.0
+
+#     fn __lt__(self, other:Scalar[T])->Bool:
+#         return False
+    
+#     fn __le__(self, other:Scalar[T])->Bool:
+#         return False
+    
+#     fn __gt__(self, other:Scalar[T])->Bool:
+#         return True
+    
+#     fn __ge__(self, other:Scalar[T])->Bool:
+#         return True
+
+#     fn __eq__(self, other:Scalar[T])->Bool:
+#         return self.value == other.value
+    
+#     fn __ne__(self, other:Scalar[T])->Bool:
+#         return self.value != other.value
+
+#     fn __str__(self)->String:
+#         return "+Inf"
+    
+#     fn print(self)->None:
+#         print("+Inf")
+
+# struct mInf[T:DType]():
+#     var value:Scalar[T] 
+
+#     fn __init__(inout self):
+#         self.value = 0.0
+
+#     fn __lt__(self, other:mInf[T])->Bool:
+#         return True
+    
+#     fn __le__(self, other:mInf[T])->Bool:
+#         return True
+    
+#     fn __gt__(self, other:mInf[T])->Bool:
+#         return False
+    
+#     fn __ge__(self, other:mInf[T])->Bool:
+#         return False
+
+#     fn __eq__(self, other:mInf[T])->Bool:
+#         if other.value == math.limit.inf[T]:
+#             return True
+#         return False
+    
+#     fn __ne__(self, other:mInf[T])->Bool:
+#         if other.value != math.limit.inf[T]:
+#             return True
+#         return False
+
+#     fn __str__(self)->String:
+#         return "-Inf"
+    
+#     fn print(self)->None:
+#         print("-Inf")
 
 
 # SORTING ALGORITHMS
@@ -16,7 +80,7 @@ fn binary_sort[T:DType](tensor:Tensor[T])->Tensor[T]:
                 result[i-1] = result[i]
                 result[i] = temp
     return result
-
+ 
 ### NON MATH LIBRARY FUNCTIONS
 # ! All these functions only calculate for 1D tensor, I need to implement them for ND using input axis parameter like numpy
 fn sum[T:DType](tensor:Tensor[T])->Scalar[T]:
@@ -69,17 +133,37 @@ fn median[T:DType](tensor:Tensor[T])->Scalar[T]:
     else:
         return (sorted_tensor[n // 2 - 1] + sorted_tensor[n // 2]) / 2
 
-fn max[T:DType](tensor:Tensor[T])->Scalar[T]:
-    var result_max:Scalar[T] = Scalar[T](tensor[0])
-    for i in range(tensor.num_elements()):
-        result_max[0] = math.max(result_max[0], tensor.data().load[width=1](i))
-    return result_max
 
-fn min[T:DType](tensor:Tensor[T])->Scalar[T]:
-    var result_min:Scalar[T] = Scalar[T](tensor[0])
-    for i in range(tensor.num_elements()):
-        result_min[0] = math.min(result_min[0], tensor.data().load[width=1](i))
-    return result_min
+
+fn max_vec[T:DType](tensor:Tensor[T])->Scalar[T]:
+    # var max_value = Tensor[T](TensorShape(2), List[Scalar[T]](tensor.__getitem__(0),tensor.__getitem__(1)))
+    # var max_value = Tensor[T](TensorShape(5), List[Scalar[T]](tensor[0], tensor[0], tensor[0], tensor[0], tensor[0]))
+    alias nelts = simdwidthof[T]()
+    var max_value = Tensor[T](TensorShape(nelts))
+    for i in range(nelts):
+        max_value[i] = tensor[0]
+
+    @parameter
+    fn vectorized[simd_width: Int](idx: Int) -> None:
+        max_value.data().store[width=simd_width](0, math.max(max_value.data().load[width=simd_width](0), tensor.data().load[width=simd_width](idx)))
+    vectorize[vectorized, nelts](tensor.num_elements())
+    return max_value[0]
+
+
+
+fn min_vec[T:DType](tensor:Tensor[T])->Scalar[T]:
+    # var max_value = Tensor[T](TensorShape(2), List[Scalar[T]](tensor.__getitem__(0),tensor.__getitem__(1)))
+    # var max_value = Tensor[T](TensorShape(5), List[Scalar[T]](tensor[0], tensor[0], tensor[0], tensor[0], tensor[0]))
+    alias nelts = simdwidthof[T]()
+    var max_value = Tensor[T](TensorShape(nelts))
+    for i in range(nelts):
+        max_value[i] = tensor[0]
+
+    @parameter
+    fn vectorized[simd_width: Int](idx: Int) -> None:
+        max_value.data().store[width=simd_width](0, math.min(max_value.data().load[width=simd_width](0), tensor.data().load[width=simd_width](idx)))
+    vectorize[vectorized, nelts](tensor.num_elements())
+    return max_value[0]
 
 fn pvariance[T:DType](tensor:Tensor[T], mu:Scalar[T]=Scalar[T]())->Scalar[T]:
     var mean_value:Scalar[T]
@@ -94,7 +178,7 @@ fn pvariance[T:DType](tensor:Tensor[T], mu:Scalar[T]=Scalar[T]())->Scalar[T]:
         sum += (tensor[i] - mean_value) ** 2
     return sum / tensor.num_elements()
 
-fn pvariance[T:DType](tensor:Tensor[T], mu:Scalar[T]=Scalar[T]())->Scalar[T]:
+fn variance[T:DType](tensor:Tensor[T], mu:Scalar[T]=Scalar[T]())->Scalar[T]:
     var mean_value:Scalar[T]
 
     if mu == Scalar[T]():
