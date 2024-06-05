@@ -14,13 +14,16 @@ I've been keeping an eye on Mojo since its debut and have been eager to use it f
 
 * LorentzVector and Vector3D are implemented fully and maintains almost the same syntax as Python's Scikit-HEP library. If you have any ideas to implement and suggestions, please feel free to contact me. 
 
+## Features
+For a full list of features currently implemented (Necessary arguments of functions are implemented, will expand on this later once all basic important functions are implemented), please check [Available features](Features.md) for a list of function and properties implemented. 
+
 ## Installation
 
-Clone the repository
+Clone the repository and build the mojo package (Currently not all functions are documented and therefore "mojo package" gives errors, I will resolve this soon. Please download and import it as module for now)
 
 ## Usage
 
-Since SciJo is very early in development, there's not much documentation. I will try to write a proper documentation soon. Please go through the code to understand all the available options. Following is a simple example, Please take a look at doc.mojo file for syntax and options available (Only Vector3D for now).
+Since SciJo is very early in development, there's not much documentation. I will try to write a proper documentation soon. Please go through the code to understand all the available options. Following is a simple example, Please take a look at doc.mojo file for syntax and options available (Only Vector3D for now). You can also go through test.mojo to find syntax and options for now (It's messy and not organized right now).
 
 ```
 from scijo import Vector3D, LorentzVector
@@ -35,4 +38,8 @@ var restframe_lvec = lvec.torestframe() #returns to rest frame four vector
 var lvec1 = LorentzVector.setpxpypzm(3.0, 4.0, 5.0, 10.0)
 var boosted_lvec = lvec.boost(lvec1.boostvector()) # Boosts the Lorentz vector lvec using lvec1
 ```
+
+## Contributions
+Anyone interested in contributing or have interesting ideas, your suggestions are always welcomed. please feel free to contact me or open an issue. 
+
 
