@@ -1,6 +1,10 @@
 from .arrays import array
-from .functions_math import *
-from .functions_calculus import *
+from .array_routines import *
+from .mathematical_functions import *
+from .calculus import *
 from .vector import Vector2D, Vector3D
 from .lorentzvector import LorentzVector
 from .constants import * 
+from .statistics import *
+
+from .utility_functions import *
