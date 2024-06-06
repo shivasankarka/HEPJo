@@ -199,7 +199,7 @@ struct VectorizedMethod[unroll_factor:Int = 1](CalcMethods):
         
         var result_tensor: Tensor[DType.Bool] = Tensor[DType.Bool]()
         alias nelts = simdwidthof[T]()
-        
+
         @parameter
         fn vectorized[simd_width: Int](idx: Int) raises -> None:
             result_tensor.data().store[width=simd_width](idx, function[T, simd_width](t1.data().load[width=simd_width](idx)))
