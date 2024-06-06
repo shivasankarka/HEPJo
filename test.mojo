@@ -22,6 +22,10 @@ fn main() raises:
     # print(v_tensor)
 
     # arrays
+    var arr = sj.array[DType.float32](TensorShape(3), List[Float32](1.0,2.0,4.0))
+    var arr1 = sj.array[DType.float32](arr)
+    # var diff = arr1 + arr
+    print(arr1)
     # var x = Tensor[DType.float64](TensorShape(5), List[Float64](1.0,2.0,3.0,4.0,5.0))
     # var y = Tensor[DType.float64](TensorShape(5), List[Float64](10.0,3.0,50.0,1.0,15.0))
     # var xint = Tensor[DType.float64](TensorShape(5), List[Float64](3.0,4.0,5.0,6.0,7.0))
@@ -112,7 +116,7 @@ fn main() raises:
     # print(fill_arr)
     # var fill_arr1 = sj.fill[DType.float32](VariadicList[Int](2,2), 5.0)
     # print(fill_arr1)
-    var geospace_arr = sj.geomspace[DType.float32](1, 256, num=9, endpoint=True)
-    print(geospace_arr)
+    # var geospace_arr = sj.geomspace[DType.float32](1, 256, num=9, endpoint=True)
+    # print(geospace_arr)
 
 
