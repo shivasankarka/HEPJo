@@ -154,7 +154,7 @@ fn eye[T:DType](N:Int, M:Int, k:Int=0) -> Tensor[T]:
     return result
 
 fn identity[T:DType](n:Int) -> Tensor[T]:
-    return eye(n,n)
+    return eye[T](n,n)
 
 fn ones[T:DType](*shape:Int) -> Tensor[T]:
     var tens_shape:VariadicList[Int] = shape

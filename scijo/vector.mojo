@@ -8,74 +8,6 @@ from algorithm import vectorize
 
 from .constants import pi
 
-# trait vector_trait:
-#     fn __init__(inout self):
-#         ...
-#     fn __copyinit__(inout self, new: Self):
-#         ...
-#     fn __moveinit__(inout self, owned existing: Self):
-#         ...
-#     fn __getitem__(inout self, index:Int):
-#         ...
-#     fn __setitem__(inout self, index:Int, value:Scalar):
-#         ...
-#     fn __del__(owned self):
-#         ...
-#     fn __len__(self) -> Int:
-#         ...
-#     fn __int__(self) -> Int:
-#         ...
-#     fn __str__(inout self) -> String:
-#         ...
-#     fn __repr__(inout self) -> String:
-#         ...
-#     fn __pos__(inout self) -> Self:
-#         ...
-#     fn __neg__(inout self) -> Self:
-#         ...
-#     fn __eq__(self, other: Self) -> Bool:
-#         ...
-#     fn __add__(inout self, other:Scalar[dtype]) -> Self:
-#         ...
-#     fn __add__(inout self, other:Self) -> Self:
-#         ...
-#     fn __radd__(inout self, s: Scalar[dtype])->Self:
-#         ...
-#     fn __iadd__(inout self, s: Scalar[dtype]):
-#         ...
-#     fn __sub__(inout self, other:Scalar[dtype]) -> Self:
-#         ...
-#     fn __sub__(inout self, other:Self) -> Self:
-#         ...
-#     fn __rsub__(inout self, s: Scalar[dtype]) -> Self:
-#         ...
-#     fn __isub__(inout self, s: Scalar[dtype]):
-#         ...
-#     fn __mul__(self, s: Scalar[dtype])->Self:
-#         ...
-#     fn __mul__(self, other: Self)->Self:
-#         ...
-#     fn __rmul__(self, s: Scalar[dtype])->Self:
-#         ...
-#     fn __imul__(inout self, s: Scalar[dtype]):
-#         ...
-#     fn __truediv__(self, s: Scalar[dtype])->Self:
-#         ...
-#     fn __truediv__(self, other: Self)->Self:
-#         ...
-#     fn __rtruediv__(self, s: Scalar[dtype])->Self:
-#         ...
-#     fn __itruediv__(inout self, s: Scalar[dtype]):
-#         ...
-#     fn __itruediv__(inout self, other: Self):
-#         ...
-#     fn __pow__(self, p: Int)->Self:
-#         ...
-#     fn __ipow__(inout self, p: Int):
-#         ...
-#     fn __matmul__(inout self, other:Self) -> Scalar[dtype]:
-#         ...
-    
 ################################################################################################################
 ####################################### VECTOR 2D ##############################################################
 ################################################################################################################
@@ -131,7 +63,7 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
     fn __int__(self) -> Int:
         return self._size
 
-    fn __str__(self) -> String:
+    fn __str__(inout self) raises -> String:
         var printStr:String = "["
         var prec:Int=4
         for i in range(self._size):
@@ -140,14 +72,14 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
             if _mlirtype_is_eq[Scalar[dtype], Float64]():
                 var s: String = ""
                 var int_str: String
-                int_str = String(trunc(val).cast[DType.int32]())
+                int_str = String(math.trunc[dtype](val).cast[DType.int32]())
                 if val < 0.0:
                     val = -val
                 var float_str: String
                 if math.mod(val,1)==0:
                     float_str = "0"
                 else:
-                    float_str = String(mod(val,1))[2:prec+2]
+                    float_str = String(math.mod(val,1))[2:prec+2]
                 s = int_str+"."+float_str
                 if i==0:
                     printStr+=s
@@ -163,7 +95,7 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         printStr+="Length:"+str(self._size)+","+" DType:"+str(dtype)
         return printStr
 
-    fn print(self) -> None:
+    fn print(inout self) raises -> None:
         print(self.__str__() + "\n")
         print()
 
@@ -275,20 +207,20 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         return Self(x, y, z)
 
     @staticmethod
-    fn fromvector(inout v:Self) -> Self:
+    fn fromvector(inout v:Self) raises -> Self:
         return Self(v[0], v[1], v[2])
 
     @staticmethod
     fn fromsphericalcoords(r:Scalar[dtype], theta:Scalar[dtype], phi:Scalar[dtype]) -> Self:
-        var x:Scalar[dtype] = r * sin(theta) * cos(phi)
-        var y:Scalar[dtype] = r * sin(theta) * sin(phi)
-        var z:Scalar[dtype] = r * cos(theta)
+        var x:Scalar[dtype] = r * math.sin(theta) * math.cos(phi)
+        var y:Scalar[dtype] = r * math.sin(theta) * math.sin(phi)
+        var z:Scalar[dtype] = r * math.cos(theta)
         return Vector3D(x,y,z)
 
     @staticmethod
     fn fromcylindricalcoodinates(rho:Scalar[dtype], phi:Scalar[dtype], z:Scalar[dtype]) -> Self:
-        var x:Scalar[dtype] = rho * cos(phi)
-        var y:Scalar[dtype] = rho * sin(phi)
+        var x:Scalar[dtype] = rho * math.cos(phi)
+        var y:Scalar[dtype] = rho * math.sin(phi)
         return Vector3D(x,y,z)
 
     @staticmethod
@@ -363,7 +295,7 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         Returns:
             The radial distance rho, calculated as sqrt(x^2 + y^2).
         """
-        return sqrt(self.x()**2 + self.y()**2)
+        return math.sqrt(self.x()**2 + self.y()**2)
 
     fn mag(inout self) -> Scalar[dtype]:
         """
@@ -372,7 +304,7 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         Returns:
             The magnitude of the vector, calculated as sqrt(x^2 + y^2 + z^2).
         """
-        return sqrt(self._ptr[0]**2 + self._ptr[1]**2 + self._ptr[2]**2)
+        return math.sqrt(self._ptr[0]**2 + self._ptr[1]**2 + self._ptr[2]**2)
 
     fn r(inout self) -> Scalar[dtype]:
         """
@@ -405,7 +337,7 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         Returns:
             The angle theta in radians or degrees.
         """
-        var theta = acos(self.costheta())
+        var theta = math.acos(self.costheta())
         if degree == True:
             return theta * 180 / Scalar[dtype](pi)
         else:
@@ -421,7 +353,7 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         Returns:
             The angle phi in radians or degrees.
         """
-        var phi = atan2(self._ptr[1], self._ptr[0])
+        var phi = math.atan2(self._ptr[1], self._ptr[0])
         if degree == True:
          
     fn set(inout self, x:Scalar[dtype], y:Scalar[dtype], z:Scalar[dtype]):
@@ -531,10 +463,10 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
                     self._ptr[0]*other._ptr[1] - self._ptr[1]*other._ptr[0])
 
     #TODO: Gotta check this function, It returns non sense values for now lol
-    fn rotate(self, inout axis: Self, angle: Scalar[dtype]):
+    fn rotate(self, inout axis: Self, angle: Scalar[dtype]) raises:
         var u = axis.unit()
-        var cos_theta = cos(angle)
-        var sin_theta = sin(angle)
+        var cos_theta = math.cos(angle)
+        var sin_theta = math.sin(angle)
 
         var x_new = self._ptr[0] * (u[0]*u[0] * (1 - cos_theta) + cos_theta) +
                     self._ptr[1] * (u[0]*u[1] * (1 - cos_theta) - u[2]*sin_theta) +
@@ -558,8 +490,8 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
             angle: The angle in radians by which to rotate the vector around the X-axis.
         """
         var x_new = self._ptr[0]
-        var y_new = self._ptr[1]*cos(angle) - self._ptr[2]*sin(angle)
-        var z_new = self._ptr[1]*sin(angle) + self._ptr[2]*cos(angle)
+        var y_new = self._ptr[1]*math.cos(angle) - self._ptr[2]*math.sin(angle)
+        var z_new = self._ptr[1]*math.sin(angle) + self._ptr[2]*math.cos(angle)
 
         self._ptr[0] = x_new
         self._ptr[1] = y_new
@@ -572,9 +504,9 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         Parameters:
             angle: The angle in radians by which to rotate the vector around the Y-axis.
         """
-        var x_new = self._ptr[0]*cos(angle) + self._ptr[2]*sin(angle)
+        var x_new = self._ptr[0]*math.cos(angle) + self._ptr[2]*math.sin(angle)
         var y_new = self._ptr[1]
-        var z_new = -self._ptr[0]*sin(angle) + self._ptr[2]*cos(angle)
+        var z_new = -self._ptr[0]*math.sin(angle) + self._ptr[2]*math.cos(angle)
 
         self._ptr[0] = x_new
         self._ptr[1] = y_new
@@ -587,8 +519,8 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         Parameters:
             angle: The angle in radians by which to rotate the vector around the Z-axis.
         """
-        var x_new = self._ptr[0]*cos(angle) - self._ptr[1]*sin(angle)
-        var y_new = self._ptr[0]*sin(angle) + self._ptr[1]*cos(angle)
+        var x_new = self._ptr[0]*math.cos(angle) - self._ptr[1]*math.sin(angle)
+        var y_new = self._ptr[0]*math.sin(angle) + self._ptr[1]*math.cos(angle)
         var z_new = self._ptr[2]
 
     fn cos_angle(inout self, inout other:Self) -> Scalar[dtype]:
@@ -613,7 +545,7 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         Returns:
             The angle in radians between the two vectors.
         """
-        return acos(self.cos_angle(other))
+        return math.acos(self.cos_angle(other))
 
     fn isparallel(inout self, inout other:Self) -> Bool:
         """
@@ -751,7 +683,7 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         vectorize[vectorize_reduce, simd_width](self._size)
         return reduced
     
-    fn to_tensor(self) -> Tensor[dtype]:
+    fn to_tensor(inout self) raises -> Tensor[dtype]:
         var t = Tensor[dtype](self._size)
         for i in range(self._size):
             t[i] = self[i]
@@ -959,15 +891,15 @@ struct Vector2D[dtype: DType = DType.float64](
 
     @staticmethod
     fn fromsphericalcoords(r:Scalar[dtype], phi:Scalar[dtype]) -> Self:
-        var x:Scalar[dtype] = r * cos(phi) 
-        var y:Scalar[dtype] = r * sin(phi) 
-        return Vector3D(x,y)
+        var x:Scalar[dtype] = r * math.cos(phi) 
+        var y:Scalar[dtype] = r * math.sin(phi) 
+        return Self(x,y)
 
     @staticmethod
     fn fromcylindricalcoodinates(rho:Scalar[dtype], phi:Scalar[dtype]) -> Self:
-        var x:Scalar[dtype] = rho * cos(phi)
-        var y:Scalar[dtype] = rho * sin(phi)
-        return Vector3D(x,y)
+        var x:Scalar[dtype] = rho * math.cos(phi)
+        var y:Scalar[dtype] = rho * math.sin(phi)
+        return Self(x,y)
 
     @staticmethod
     fn fromlist(inout iterable: List[Scalar[dtype]]) -> Optional[Self]:
@@ -1023,7 +955,7 @@ struct Vector2D[dtype: DType = DType.float64](
         Returns:
             The radial distance rho, calculated as sqrt(x^2 + y^2).
         """
-        return sqrt(self.x()**2 + self.y()**2)
+        return math.sqrt(self.x()**2 + self.y()**2)
 
     fn mag(inout self) -> Scalar[dtype]:
         """
@@ -1032,7 +964,7 @@ struct Vector2D[dtype: DType = DType.float64](
         Returns:
             The magnitude of the vector, calculated as sqrt(x^2 + y^2 + z^2).
         """
-        return sqrt(self._ptr[0]**2 + self._ptr[1]**2)
+        return math.sqrt(self._ptr[0]**2 + self._ptr[1]**2)
 
     fn r(inout self) -> Scalar[dtype]:
         """
@@ -1053,10 +985,10 @@ struct Vector2D[dtype: DType = DType.float64](
         Returns:
             The angle phi in radians or degrees.
         """
-        var phi = atan2(self._ptr[1], self._ptr[0])
+        var phi = math.atan2(self._ptr[1], self._ptr[0])
         if degree == True:
          
-    fn set(inout self, x:Scalar[dtype], y:Scalar[dtype], z:Scalar[dtype]):
+    fn set(inout self, x:Scalar[dtype], y:Scalar[dtype]):
         """
         Sets the vector components to the specified values.
 
@@ -1162,8 +1094,8 @@ struct Vector2D[dtype: DType = DType.float64](
     #TODO: Gotta check this function, It returns non sense values for now lol
     fn rotate(self, inout axis: Self, angle: Scalar[dtype]):
         var u = axis.unit()
-        var cos_theta = cos(angle)
-        var sin_theta = sin(angle)
+        var cos_theta = math.cos(angle)
+        var sin_theta = math.sin(angle)
 
         var x_new = self._ptr[0] * (u[0]*u[0] * (1 - cos_theta) + cos_theta) +
                     self._ptr[1] * (u[0]*u[1] * (1 - cos_theta) - u[2]*sin_theta) +
@@ -1177,7 +1109,6 @@ struct Vector2D[dtype: DType = DType.float64](
 
         self._ptr[0] = x_new
         self._ptr[1] = y_new
-        self._ptr[2] = z_new
 
     fn rotate_z(inout self, angle: Scalar[dtype]):
         """
@@ -1186,8 +1117,8 @@ struct Vector2D[dtype: DType = DType.float64](
         Parameters:
             angle: The angle in radians by which to rotate the vector around the Z-axis.
         """
-        var x_new = self._ptr[0]*cos(angle) - self._ptr[1]*sin(angle)
-        var y_new = self._ptr[0]*sin(angle) + self._ptr[1]*cos(angle)
+        var x_new = self._ptr[0]*math.cos(angle) - self._ptr[1]*math.sin(angle)
+        var y_new = self._ptr[0]*math.sin(angle) + self._ptr[1]*math.cos(angle)
         self.set(x_new, y_new)
 
     fn cos_angle(inout self, inout other:Self) -> Scalar[dtype]:
@@ -1212,7 +1143,7 @@ struct Vector2D[dtype: DType = DType.float64](
         Returns:
             The angle in radians between the two vectors.
         """
-        return acos(self.cos_angle(other))
+        return math.acos(self.cos_angle(other))
 
     fn isparallel(inout self, inout other:Self) -> Bool:
         """
@@ -1237,18 +1168,6 @@ struct Vector2D[dtype: DType = DType.float64](
             True if the vectors are antiparallel, False otherwise.
         """
         return self.cos_angle(other) == -1.0
-
-    fn isperpendicular(inout self, inout other:Self) -> Bool:
-        """
-        Determines if this vector is perpendicular to another vector.
-        
-        Parameters:
-            other: The other vector to compare with.
-        
-        Returns:
-            True if the vectors are perpendicular, False otherwise.
-        """
-        return self.cos_angle(other) == 0.0
 
     # VECTORIZED MATH OPERATIONS ON VECTOR3D
     fn _elementwise_scalar_arithmetic[func: fn[dtype: DType, width: Int](SIMD[dtype, width],SIMD[dtype, width])->SIMD[dtype, width]](self, s: Scalar[dtype]) -> Self:

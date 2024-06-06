@@ -299,6 +299,9 @@ struct LorentzVector[dtype: DType = DType.float64](
     fn e(inout self, e: Scalar[dtype]):
         self.t(e)
 
+    fn m(inout self) -> Scalar[dtype]:
+        return sqrt(self.e()**2 - self.mag2())
+
     fn set(inout self, x: Scalar[dtype], y: Scalar[dtype], z: Scalar[dtype], t: Scalar[dtype]):
         self.x(x)
         self.y(y)
