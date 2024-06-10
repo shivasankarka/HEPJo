@@ -1,5 +1,5 @@
 from builtin.dtype import DType
-from tensor import Tensor, TensorShape, rand
+from tensor import Tensor, TensorShape
 
 # Intable, Stringable
 struct array[T: DType = DType.float32](Stringable):

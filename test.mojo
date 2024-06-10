@@ -1,5 +1,5 @@
 import scijo as sj
-from tensor import Tensor, TensorShape, rand
+from tensor import Tensor, TensorShape
 from scijo.interpolate import interp1d
 import math as mt
 

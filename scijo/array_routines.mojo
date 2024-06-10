@@ -11,11 +11,13 @@ fn arange[T:DType](start: Scalar[T], stop: Scalar[T], step: Scalar[T]) -> Tensor
 
         Parameter:
             T: DType         - datatype of the Tensor
+
+        Args:
             start: Scalar[T] - Start value
             stop: Scalar[T]  - End value
             step: Scalar[T]  - Step size between each element.
 
-        Return:
+        Returns:
             Tensor[T] - Tensor of datatype T with elements ranging from "start" to "stop" incremented with "step".
     """
     var result: Tensor[T] = Tensor[T]()
@@ -33,6 +35,18 @@ fn arange[T:DType](start: Scalar[T], stop: Scalar[T], step: Scalar[T]) -> Tensor
 ##############################################
 fn linspace[T:DType](start: Scalar[T], stop: Scalar[T], num: Int, endpoint: Bool = True, parallel: Bool = False) -> Tensor[T]:
     """
+        Function that computes a series of linearly spaced values starting from "start" to "stop" with given size.
+
+        Parameter:
+            T: DType         - datatype of the Tensor
+
+        Args:
+            start: Scalar[T] - Start value
+            stop: Scalar[T]  - End value
+            num: Int  - No of linearly spaced elements 
+
+        Returns:
+            Tensor[T] - Tensor of datatype T with elements ranging from "start" to "stop" with num elements. 
 
     """
     if parallel:
