@@ -1,4 +1,4 @@
-# SciJo: Scientific Computing in Mojo
+# HEPJo: High Energy Physics Computing in Mojo
 
 <img src="extras/SciJo.jpeg" alt="logo" width="250"/>
 
