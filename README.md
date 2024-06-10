@@ -1,6 +1,6 @@
 # HEPJo: High Energy Physics Computing in Mojo
 
-<img src="extras/SciJo.jpeg" alt="logo" width="250"/>
+<img src="extras/hepjo_img.jpeg" alt="logo" width="250"/>
 
 HEPJo is a library for numerical computations in Mojo, inspired by [Scikit-HEP](https://scikit-hep.org) library in Python. Our future goal is to incorporate as many features from Scikit-HEP as possible. Currently, HEPJo includes functions for numerical operations in particle physics, such as LorentzVector, Vector3D, Vector2D with plans to expand further.
 
