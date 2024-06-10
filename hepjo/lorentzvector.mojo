@@ -2,7 +2,7 @@
 from builtin.dtype import DType
 from collections.vector import InlinedFixedVector
 from algorithm import vectorize
-from math import add, sub, mul, div, sin, cos, acos, atan2, sqrt, sinh, abs, log
+import math
 
 # Modules
 from .vector import Vector3D
@@ -374,9 +374,6 @@ struct LorentzVector[dtype: DType = DType.float64](
             print("eta > 1.0, Returning 10e10")
             return 10e10 if self.z() > 0 else -10e10
 
-    fn boostvector(inout self) -> Vector3D[dtype]:
-        return Vector3D(self.x()/self.t(), self.y()/self.t(), self.z()/self.t())
-
     fn pseudorapidity(inout self) -> Scalar[dtype]:
        return self.eta()
 
@@ -387,6 +384,8 @@ struct LorentzVector[dtype: DType = DType.float64](
         return Self(self._ptr[0], self._ptr[1], self._ptr[2], self._ptr[3])
 
     # Implement iter
+    fn boostvector(inout self) -> Vector3D[dtype]:
+        return Vector3D(self.x()/self.t(), self.y()/self.t(), self.z()/self.t())
 
     fn boost(inout self, inout args:Vector3D[dtype]) raises -> Self:  
         if len(args) != 3:
