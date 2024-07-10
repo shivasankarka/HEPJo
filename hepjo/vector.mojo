@@ -14,6 +14,7 @@ from .constants import pi
 ####################################### VECTOR 2D ##############################################################
 ################################################################################################################
 
+@register_passable("trivial")
 struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized, Stringable): 
     var _ptr: DTypePointer[dtype]
     var _size: Int
@@ -42,14 +43,14 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         self._size = 3
         self._ptr = _ptr
 
-    fn __copyinit__(inout self, new: Self):
-        self._size = new._size
-        self._ptr = new._ptr
+    # fn __copyinit__(inout self, new: Self):
+    #     self._size = new._size
+    #     self._ptr = new._ptr
 
-    fn __moveinit__(inout self, owned existing: Self):
-        self._size = existing._size
-        self._ptr = existing._ptr
-        existing._ptr = DTypePointer[dtype]() # ! maybe I should use .free()?
+    # fn __moveinit__(inout self, owned existing: Self):
+    #     self._size = existing._size
+    #     self._ptr = existing._ptr
+    #     existing._ptr = DTypePointer[dtype]() # ! maybe I should use .free()?
         # existing._ptr.free()
 
     # TODO: I have used a print block and return 0 for invalid index, there's clash between Stringable and raises if I add a raise Error.
@@ -63,8 +64,8 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
     fn __setitem__(inout self, index:Int, value:Scalar[dtype]):
         self._ptr.store[width=1](index, value)
 
-    fn __del__(owned self):
-        self._ptr.free()
+    # fn __del__(owned self):
+    #     self._ptr.free()
 
     fn __len__(self) -> Int:
         return self._size
