@@ -153,19 +153,16 @@ struct Particle[
     var momentum: LorentzVector[dtype]
     var pos: Vector3D[dtype]
 
-    fn __init__(
-        inout self,
-        attr: ParticleAttributes[dtype]
-    ):
+    fn __init__(inout self, attr: ParticleAttributes[dtype]):
         self.attr = attr
         self.momentum = LorentzVector[dtype](0.0, 0.0, 0.0, 0.0)
         self.pos = Vector3D[dtype](0.0, 0.0, 0.0)
 
     fn __init__(
-        inout self, 
+        inout self,
         attr: ParticleAttributes[dtype],
         momentum: LorentzVector[dtype],
-        pos: Vector3D[dtype]
+        pos: Vector3D[dtype],
     ):
         self.attr = attr
         self.momentum = momentum
@@ -303,9 +300,9 @@ struct ParticleGun[dtype: DType = DType.float64]():
             print("Simulation started for " + self.particle.attr.name + "\n")
             print("Time: " + str(t) + "\n")
         var vel = self.particle.momentum.vector()
-        self.particle.pos = self.particle.pos +  vel * (t / self.particle.momentum.e())  # calculate new position
+        self.particle.pos = self.particle.pos + vel * (
+            t / self.particle.momentum.e()
+        )  # calculate new position
         if verbose:
             print("New position: " + str(self.particle.pos) + "\n")
             print("Simulation ended for " + self.particle.attr.name + "\n")
-
-
