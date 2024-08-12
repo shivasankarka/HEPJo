@@ -8,6 +8,7 @@ import math
 from .vector import Vector3D
 from .constants import pi
 
+
 @register_passable("trivial")
 struct LorentzVector[dtype: DType = DType.float64](
     Intable, CollectionElement, Sized
@@ -58,7 +59,7 @@ struct LorentzVector[dtype: DType = DType.float64](
     #     self._size = existing._size
     #     self._ptr = existing._ptr
     #     existing._size = 0
-        # existing._ptr = DTypePointer[dtype]()
+    # existing._ptr = DTypePointer[dtype]()
 
     fn __getitem__(inout self, index: Int) -> Scalar[dtype]:
         return self._ptr.load[width=1](index)
