@@ -2,16 +2,125 @@ from builtin.math import pow
 from sys.intrinsics import _mlirtype_is_eq
 from algorithm.functional import elementwise
 from algorithm import vectorize
-from collections import StaticIntTuple
+from builtin.type_aliases import AnyLifetime
 
+from tensor import Tensor
 from .constants import pi
+import .math_funcs as mf
+from .traits import vectors
 
+"""
+TODO:
+1) Add vector2DIter
+2) Rewrite the docstrings
+3) Add copy, move methods for vector3D
+"""
 ################################################################################################################
 ####################################### VECTOR 3D ##############################################################
 ################################################################################################################
 
-@register_passable("trivial")
-struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized, Stringable): 
+@value
+struct _vector3DIter[
+    is_mutable: Bool, //,
+    lifetime: AnyLifetime[is_mutable].type,
+    dtype: DType,
+    forward: Bool = True,
+]:
+    """Iterator for Vector3D.
+
+    Parameters:
+        is_mutable: Whether the iterator is mutable.
+        lifetime: The lifetime of the underlying NDArray data.
+        dtype: The data type of the item.
+        forward: The iteration direction. `False` is backwards.
+    """
+
+    var index: Int
+    var array: Vector3D[dtype]
+    var length: Int
+
+    fn __init__(
+        inout self,
+        array: Vector3D[dtype],
+        length: Int,
+    ):
+        self.index = 0 if forward else length
+        self.length = length
+        self.array = array
+
+    fn __iter__(self) -> Self:
+        return self
+
+    fn __next__(inout self) raises -> Vector3D[dtype]:
+        @parameter
+        if forward:
+            var current_index = self.index
+            self.index += 1
+            return self.array.__getitem__(current_index)
+        else:
+            var current_index = self.index
+            self.index -= 1
+            return self.array.__getitem__(current_index)
+
+    fn __len__(self) -> Int:
+        @parameter
+        if forward:
+            return self.length - self.index
+        else:
+            return self.index
+
+@value
+struct _vector2DIter[
+    is_mutable: Bool, //,
+    lifetime: AnyLifetime[is_mutable].type,
+    dtype: DType,
+    forward: Bool = True,
+]:
+    """Iterator for Vector3D.
+
+    Parameters:
+        is_mutable: Whether the iterator is mutable.
+        lifetime: The lifetime of the underlying NDArray data.
+        dtype: The data type of the item.
+        forward: The iteration direction. `False` is backwards.
+    """
+
+    var index: Int
+    var array: Vector2D[dtype]
+    var length: Int
+
+    fn __init__(
+        inout self,
+        array: Vector2D[dtype],
+        length: Int,
+    ):
+        self.index = 0 if forward else length
+        self.length = length
+        self.array = array
+
+    fn __iter__(self) -> Self:
+        return self
+
+    fn __next__(inout self) raises -> Vector3D[dtype]:
+        @parameter
+        if forward:
+            var current_index = self.index
+            self.index += 1
+            return self.array.__getitem__(current_index)
+        else:
+            var current_index = self.index
+            self.index -= 1
+            return self.array.__getitem__(current_index)
+
+    fn __len__(self) -> Int:
+        @parameter
+        if forward:
+            return self.length - self.index
+        else:
+            return self.index
+
+@value
+struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized, Stringable, vectors): 
     # Fields
     var data: DTypePointer[dtype]
     """3D vector data."""
@@ -80,111 +189,222 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         self.data.store[width=1](index, value)
 
     fn __len__(self) -> Int:
+        """ Returns the length of the Vector3D (=3). """
         return self.size
 
+    # TODO: change this to represent the Int version
     fn __int__(self) -> Int:
         return self.size
 
     fn __str__(self: Vector3D[dtype]) -> String:
-        var printStr:String = "["
-        var prec:Int=4
-        for i in range(self.size):
-            try:
-                var val = self[i]
-            except:
-                var val = 0
-            @parameter
-            if _mlirtype_is_eq[Scalar[dtype], Float64]():
-                var s: String = ""
-                var int_str: String
-                int_str = String(math.trunc(val).cast[DType.int32]())
-                if val < 0.0:
-                    val = -val
-                var float_str: String
-                if SIMD.__mod__(val,1)==0:
-                    float_str = "0"
-                else:
-                    float_str = String(SIMD.__mod__(val,1))[2:prec+2]
-                s = int_str+"."+float_str
-                if i==0:
-                    printStr+=s
-                else:
-                    printStr+="  "+s
-            else:
-                if i==0:
-                    printStr+=str(val)
-                else:
-                    printStr+="  "+str(val)
+        """
+        To use Stringable trait and print the array. 
+        """
+        var printStr:String = "Vector3D: ["
+        try:
+            for i in range(self.size):
+                printStr += str(self[i])
+                if i!=2:
+                    printStr += " , "
 
-        printStr+="], "
-        printStr+= "dtype="+str(dtype)+", "+"Length="+str(self.size)
-        return printStr
+            printStr+="]" + "\n"
+            printStr+= "Dtype=" + str(dtype)
+            return printStr
+        except:
+            print("Cannot convery Vector3D to string.")
 
-    fn print(inout self) raises -> None:
+    fn print(self) raises -> None:
+        """Prints the Vector3D."""
         print(self.__str__() + "\n")
         print()
 
     fn __repr__(inout self) -> String:
-        return "Vector3D(x="+str(self.data[0])+", y="+str(self.data[1])+", z="+str(self.data[2])+")"
+        """Compute the "official" string representation of Vector3D."""
+        return "Vector3D[DType.int64](x="+str(self.data[0])+", y="+str(self.data[1])+", z="+str(self.data[2])+")"
 
     # TODO: Implement iterator for Vector3D
-    # fn __iter__(inout self) -> Self:
-    #     self.index = -1
-    #     return self
+    fn __iter__(self) raises -> _vector3DIter[__lifetime_of(self), dtype]:
+        """Iterate over elements of the Vector3D, returning copied value.
 
-    # fn __next__(inout self) -> Scalar[dtype]:
-    #     self.index += 1
-    #     if self.index == self.size:
-    #         # return Optional[Scalar[dtype]]()
-    #         return Scalar[dtype]()
-    #     else:
-    #         return self.data[self.index]
+        Returns:
+            An iterator of Vector3D elements.
+
+        Notes:
+            Need to add lifetimes after the new release.
+        """
+
+        return _vector3DIter[__lifetime_of(self), dtype](
+            array=self,
+            length=self.size,
+        )
+
+    fn __reversed__(
+        self,
+    ) raises -> _vector3DIter[__lifetime_of(self), dtype, forward=False]:
+        """Iterate backwards over elements of the Vector3D, returning
+        copied value.
+
+        Returns:
+            A reversed iterator of Vector3D elements.
+        """
+
+        return _vector3DIter[__lifetime_of(self), dtype, forward=False](
+            array=self,
+            length=self.size,
+        )
 
     fn __pos__(self) -> Self:
         return self*(1.0)
 
     fn __neg__(self) -> Self:
         return self*(-1.0)
+    
+    fn load[width: Int = 1](self, idx: Int) -> SIMD[dtype, width]:
+        """
+        SIMD load elements.
+        """
+        return self.data.load[width = width](idx)
 
-    fn __eq__(self, other: Self) -> Bool:
-        return self.data == other.data
+    fn store[width: Int = 1](self, idx: Int, val: SIMD[dtype, width]):
+        """
+        SIMD store elements.
+        """
+        self.data.store[width = width](idx, val)
+    
+    fn unsafe_ptr(self) -> DTypePointer[dtype, 0]:
+        """
+        Retreive pointer without taking ownership.
+        """
+        return self.data
+        
+    fn typeof(inout self) -> DType:
+        return dtype
 
-    # ARITHMETICS
+    fn typeof_str(inout self) -> String:
+        return dtype.__str__()
+    
+    """COMPARISIONS."""
+    @always_inline("nodebug")
+    fn __eq__(self, other: Self) raises -> Vector3D[DType.bool]:
+        """
+        Itemwise equivelence.
+        """
+        return mf.compare_2_vectors[dtype, SIMD.__eq__](self, other)
+
+    @always_inline("nodebug")
+    fn __eq__(self, other: SIMD[dtype, 1]) raises -> Vector3D[DType.bool]:
+        """
+        Itemwise equivelence between scalar and Array.
+        """
+        return mf.compare_vector_and_scalar[dtype, SIMD.__eq__](self, other)
+
+    @always_inline("nodebug")
+    fn __ne__(self, other: Vector3D[dtype]) raises -> Vector3D[DType.bool]:
+        """
+        Itemwise nonequivelence between scalar and Array.
+        """
+        return mf.compare_2_vectors[dtype, SIMD.__ne__](self, other)
+
+    @always_inline("nodebug")
+    fn __ne__(self, other: SIMD[dtype, 1]) raises -> Vector3D[DType.bool]:
+        """
+        Itemwise nonequivelence.
+        """
+        return mf.compare_vector_and_scalar[dtype, SIMD.__ne__](self, other)
+
+    @always_inline("nodebug")
+    fn __lt__(self, other: Vector3D[dtype]) raises -> Vector3D[DType.bool]:
+        """
+        Itemwise less than between scalar and Array.
+        """
+        return mf.compare_2_vectors[dtype, SIMD.__lt__](self, other)
+    
+    @always_inline("nodebug")
+    fn __lt__(self, other: SIMD[dtype, 1]) raises -> Vector3D[DType.bool]:
+        """
+        Itemwise less than.
+        """
+        return mf.compare_vector_and_scalar[dtype, SIMD.__lt__](self, other)
+
+    @always_inline("nodebug")
+    fn __le__(self, other: Vector3D[dtype]) raises -> Vector3D[DType.bool]:
+        """
+        Itemwise less than or equal to between scalar and Array.
+        """
+        return mf.compare_2_vectors[dtype, SIMD.__le__](self, other)
+
+    @always_inline("nodebug")
+    fn __le__(self, other: SIMD[dtype, 1]) raises -> Vector3D[DType.bool]:
+        """
+        Itemwise less than or equal to.
+        """
+        return mf.compare_vector_and_scalar[dtype, SIMD.__le__](self, other)
+
+    @always_inline("nodebug")
+    fn __gt__(self, other: Vector3D[dtype]) raises -> Vector3D[DType.bool]:
+        """
+        Itemwise greater than between scalar and Array.
+        """
+        return mf.compare_2_vectors[dtype, SIMD.__gt__](self, other)
+
+    @always_inline("nodebug")
+    fn __gt__(self, other: SIMD[dtype, 1]) raises -> Vector3D[DType.bool]:
+        """
+        Itemwise greater than.
+        """
+        return mf.compare_vector_and_scalar[dtype, SIMD.__gt__](self, other)
+
+    @always_inline("nodebug")
+    fn __ge__(self, other: Vector3D[dtype]) raises -> Vector3D[DType.bool]:
+        """
+        Itemwise less than or equal to between scalar and Array.
+        """
+        return mf.compare_2_vectors[dtype, SIMD.__ge__](self, other)
+
+    @always_inline("nodebug")
+    fn __ge__(self, other: SIMD[dtype, 1]) raises -> Vector3D[DType.bool]:
+        """
+        Itemwise greater than or equal to.
+        """
+        return mf.compare_vector_and_scalar[dtype, SIMD.__ge__](self, other)
+
+    # 
+    """COMPARISIONS."""
     fn __add__(self, other:Scalar[dtype]) -> Self:
-        return self._elementwise_scalar_arithmetic[SIMD.__add__](other)
+        return mf.elementwise_scalar_arithmetic[dtype, SIMD.__add__](self, other)
 
     fn __add__(self, other:Self) -> Self:
-        return self._elementwise_array_arithmetic[SIMD.__add__](other)
+        return mf.elementwise_array_arithmetic[dtype, SIMD.__add__](self, other)
 
-    fn __radd__(self, s: Scalar[dtype])->Self:
-        return self + s
+    fn __radd__(self, other: Scalar[dtype])->Self:
+        return self + other
 
-    fn __iadd__(inout self, s: Scalar[dtype]):
-        self = self + s
+    fn __iadd__(inout self, other: Scalar[dtype]):
+        self = self + other
     
     fn __sub__(self, other:Scalar[dtype]) -> Self:
-        return -self._elementwise_scalar_arithmetic[SIMD.__sub__](other)
+        return mf.elementwise_scalar_arithmetic[dtype, SIMD.__sub__](self, other)
 
     fn __sub__(self, other:Self) -> Self:
-        return -self._elementwise_array_arithmetic[SIMD.__sub__](other)
+        return mf.elementwise_array_arithmetic[dtype, SIMD.__sub__](self, other)
 
-    fn __rsub__(self, s: Scalar[dtype])->Self:
-        return -(self - s)
+    fn __rsub__(self, other: Scalar[dtype])->Self:
+        return -(self - other)
 
-    fn __isub__(inout self, s: Scalar[dtype]):
-        self = self-s
+    fn __isub__(inout self, other: Scalar[dtype]):
+        self = self-other
 
-    fn __mul__(self, s: Scalar[dtype])->Self:
-        return self._elementwise_scalar_arithmetic[SIMD.__mul__](s)
+    fn __mul__(self, other: Scalar[dtype])->Self:
+        return mf.elementwise_scalar_arithmetic[dtype, SIMD.__mul__](self, other)
 
     fn __mul__(self, other: Self)->Self:
-        return self._elementwise_array_arithmetic[SIMD.__mul__](other)
+        return mf.elementwise_array_arithmetic[dtype, SIMD.__mul__](self, other)
 
-    fn __rmul__(self, s: Scalar[dtype])->Self:
-        return self*s
+    fn __rmul__(self, other: Scalar[dtype])->Self:
+        return self*other
 
-    fn __imul__(inout self, s: Scalar[dtype]):
-        self = self*s
+    fn __imul__(inout self, other: Scalar[dtype]):
+        self = self*other
 
     # * since "*" already does element wise calculation, I think matmul is redundant for 1D array, but I could use it for dot products
     # fn __matmul__(inout self, other:Self) -> Scalar[dtype]: 
@@ -198,18 +418,18 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
 
     fn _elementwise_pow(self, p: Int) -> Self:
         alias simd_width: Int = simdwidthof[dtype]()
-        var new_vec = Self(self.size)
+        var new_vec = Self()
         @parameter
         fn tensor_scalar_vectorize[simd_width: Int](idx: Int) -> None:
             new_vec.data.store[width=simd_width](idx, pow(self.data.load[width=simd_width](idx), p))
         vectorize[tensor_scalar_vectorize, simd_width](self.size)
         return new_vec
 
-    fn __truediv__(inout self, s: Scalar[dtype]) -> Self:
-        return self._elementwise_scalar_arithmetic[SIMD.__truediv__](s)
+    fn __truediv__(inout self, other: Scalar[dtype]) -> Self:
+        return mf.elementwise_scalar_arithmetic[dtype, SIMD.__truediv__](self, other)
 
     fn __truediv__(inout self, other:Self) -> Self:
-        return self._elementwise_array_arithmetic[SIMD.__truediv__](other)
+        return mf.elementwise_array_arithmetic[dtype, SIMD.__truediv__](self, other)
 
     fn __itruediv__(inout self, s: Scalar[dtype]):
         self = self.__truediv__(s)
@@ -219,12 +439,6 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
 
     fn __rtruediv__(inout self, s: Scalar[dtype]) -> Self:
         return self.__truediv__(s)
-
-    fn typeof(inout self) -> DType:
-        return dtype
-
-    fn typeof_str(inout self) -> String:
-        return dtype.__str__()
 
     # * STATIC METHODS
     @staticmethod
@@ -478,7 +692,7 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         Returns:
             The scalar dot product of the two vectors.
         """
-        return self._elementwise_array_arithmetic[SIMD.__mul__](other)._reduce_sum()
+        return self.__mul__(other)._reduce_sum()
 
     fn cross(self, other: Self) -> Self:
         """
@@ -620,81 +834,7 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         """
         return self.cos_angle(other) == 0.0
 
-    # VECTORIZED MATH OPERATIONS ON VECTOR3D
-    fn _elementwise_scalar_arithmetic[function: fn[dtype: DType, width: Int](SIMD[dtype, width],SIMD[dtype, width])->SIMD[dtype, width]](self, s: Scalar[dtype]) -> Self:
-        """
-        Performs an element-wise scalar arithmetic operation on this vector using SIMD. 
-        This function applies a specified arithmetic operation to each element of the vector 
-        in conjunction with a scalar value such as 
-            self + s
-            self - s
-            self * s
-            self / s
-
-        Parameters:
-            func: A function that specifies the arithmetic operation to be performed. It takes two SIMD arguments and returns a SIMD result.
-        
-        Args:
-            s: The scalar value to be used in the function operation. 
-
-        Returns:
-            A new instance of the vector where each element is the result of applying the arithmetic operation between the scalar `s` and the corresponding element of the original vector.
-        """
-        alias simd_width: Int = simdwidthof[dtype]()
-        var new_array = Self(self.size)
-        @parameter
-        fn elemwise_vectorize[simd_width: Int](idx: Int) -> None:
-            new_array.data.store[width=simd_width](idx, function[dtype, simd_width](SIMD[dtype, simd_width](s), self.data.load[width=simd_width](idx)))
-        vectorize[elemwise_vectorize, simd_width](self.size)
-        return new_array
-
-    
-    fn _elementwise_array_arithmetic[function: fn[dtype: DType, width: Int](SIMD[dtype, width],SIMD[dtype, width])->SIMD[dtype, width]](self, other: Self) -> Self:
-        """
-        Performs an element-wise arithmetic operation between two vectors using SIMD (Single Instruction, Multiple Data) techniques.
-        
-        This function leverages a provided SIMD-compatible function `func` to perform the specified arithmetic operation on corresponding elements of this vector and another vector `other`.
-        
-        Parameters:
-            function: A function that specifies the arithmetic operation to be performed. It takes two SIMD arguments and returns a SIMD result.
-        
-        Args:
-            other: The scalar input for func
-        
-        Returns:
-            A new vector instance where each element is the result of the arithmetic operation performed on corresponding elements of the two input vectors.
-        """
-        alias simd_width = simdwidthof[dtype]()
-        var new_vec = Self()
-        @parameter
-        fn vectorized_arithmetic[simd_width:Int](index: Int) -> None:
-            new_vec.data.store[width=simd_width](index, function[dtype, simd_width](self.data.load[width=simd_width](index), other.data.load[width=simd_width](index)))
-
-        vectorize[vectorized_arithmetic, simd_width](self.size)
-        return new_vec
-
-    fn _elementwise_function_arithmetic[func: fn[dtype: DType, width: Int](SIMD[dtype, width])->SIMD[dtype, width]](self) -> Self:
-        """
-        Applies a SIMD-compatible function element-wise to this vector.
-        
-        This function takes a SIMD-compatible function `func` that operates on a single SIMD type and applies it to each element of the vector, effectively transforming each element based on the function's logic.
-        
-        Parameters:
-            func: A function that takes a SIMD type and returns a SIMD type, defining the operation to be performed on each element.
-        
-        Returns:
-            A new vector instance where each element is the result of applying `func` to the corresponding element of the original vector.
-        """
-        alias simd_width = simdwidthof[dtype]()
-        var new_vec = Self()
-        @parameter
-        fn vectorized_arithmetic[simd_width:Int](index: Int) -> None:
-            new_vec.data.store[width=simd_width](index, func[dtype, simd_width](self.data.load[width=simd_width](index)))
-
-        vectorize[vectorized_arithmetic, simd_width](self.size)
-        return new_vec
-
-    fn act[function: fn[type:DType, simd_width:Int](SIMD[type, simd_width]) -> SIMD[type,simd_width]](inout self) -> Self:
+    fn act[function: fn[type:DType, simd_width:Int](SIMD[type, simd_width]) -> SIMD[type,simd_width]](inout self):
         """
         Applies a specified SIMD-compatible function to each element of the vector and returns the modified vector.
         
@@ -703,10 +843,8 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         Parameters:
             function: A function that takes a SIMD type and returns a SIMD type, specifying the operation to be performed on each element.
         
-        Returns:
-            A new vector instance where each element has been transformed by the specified function.
         """
-        return self._elementwise_function_arithmetic[function]()
+        mf.elementwise_function_arithmetic[dtype, function](self)
 
     fn _reduce_sum(self) -> Scalar[dtype]:
         """
@@ -721,7 +859,7 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         alias simd_width: Int = simdwidthof[dtype]()
         @parameter
         fn vectorize_reduce[simd_width: Int](idx: Int) -> None:
-            reduced[0] += self.data.load[width = simd_width](idx).reduce_add()
+            reduced += self.data.load[width = simd_width](idx).reduce_add()
         vectorize[vectorize_reduce, simd_width](self.size)
         return reduced
     
@@ -735,39 +873,28 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
 ####################################### VECTOR 2D ##############################################################
 ################################################################################################################
 
+@value
 struct Vector2D[dtype: DType = DType.float64](
-    Intable, CollectionElement, Sized, Stringable
+    Intable, CollectionElement, Sized, Stringable, vectors
     ):
     var data: DTypePointer[dtype]
-    var size: Int
+    """3D vector data."""
+    alias size: Int = 2
+    """The size of the Vector."""
 
-    # Constructors
-    # * I need to figure out how to assign the datatype given by user if possible
+    """Constructors."""
     fn __init__(inout self):
         # default constructor
-        self.size = 2
         self.data =  DTypePointer[dtype].alloc(self.size)
         memset_zero(self.data, self.size)
 
     fn __init__(inout self, *data:Scalar[dtype]):
-        self.size = 2
-
         self.data = DTypePointer[dtype].alloc(self.size)
         for i in range(self.size):
             self.data[i] = data[i]
 
     fn __init__(inout self, data: DTypePointer[dtype]):
-        self.size = 2
         self.data = data
-
-    fn __copyinit__(inout self, new: Self):
-        self.size = new.size
-        self.data = new.data
-
-    fn __moveinit__(inout self, owned existing: Self):
-        self.size = existing.size
-        self.data = existing.data
-        existing.data = DTypePointer[dtype]()
 
     fn __getitem__(self, index:Int) -> Scalar[dtype]:
         return self.data.load[width=1](index)
@@ -785,38 +912,23 @@ struct Vector2D[dtype: DType = DType.float64](
         return self.size
 
     fn __str__(self) -> String:
-        var printStr:String = "["
-        var prec:Int=4
-        for i in range(self.size):
-            var val = self[i]
-            @parameter
-            if _mlirtype_is_eq[Scalar[dtype], Float64]():
-                var s: String = ""
-                var int_str: String
-                int_str = String(trunc(val).cast[DType.int32]())
-                if val < 0.0:
-                    val = -val
-                var float_str: String
-                if math.mod(val,1)==0:
-                    float_str = "0"
-                else:
-                    float_str = String(mod(val,1))[2:prec+2]
-                s = int_str+"."+float_str
-                if i==0:
-                    printStr+=s
-                else:
-                    printStr+="  "+s
-            else:
-                if i==0:
-                    printStr+=str(val)
-                else:
-                    printStr+="  "+str(val)
+        """
+        To use Stringable trait and print the array. 
+        """
+        var printStr:String = "Vector3D: ["
+        try:
+            for i in range(self.size):
+                printStr += str(self[i])
+                if i!=2:
+                    printStr += " , "
 
-        printStr+="]\n"
-        printStr+="Length:"+str(self.size)+","+" DType:"+str(dtype)
-        return printStr
+            printStr+="]" + "\n"
+            printStr+= "Dtype=" + str(dtype)
+            return printStr
+        except:
+            print("Cannot convery Vector3D to string.")
 
-    fn print(self) -> None:
+    fn print(self) raises -> None:
         print(self.__str__() + "\n")
         print()
 
@@ -824,68 +936,194 @@ struct Vector2D[dtype: DType = DType.float64](
         return "Vector2D(x="+str(self.data[0])+", y="+str(self.data[1])+")"
 
     # TODO: Implement iterator for Vector3D, I am not sure how to end the loop in __next__ method.
-    # fn __iter__(inout self) -> Self:
-    #     self.index = -1
-    #     return self
 
-    # fn __next__(inout self) -> Scalar[dtype]:
-    #     self.index += 1
-    #     if self.index == self.size:
-    #         # return Optional[Scalar[dtype]]()
-    #         return Scalar[dtype]()
-    #     else:
-    #         return self.data[self.index]
 
-    fn __pos__(inout self) -> Self:
+     # TODO: Implement iterator for Vector3D
+    fn __iter__(self) raises -> _vector2DIter[__lifetime_of(self), dtype]:
+        """Iterate over elements of the Vector3D, returning copied value.
+
+        Returns:
+            An iterator of Vector3D elements.
+
+        Notes:
+            Need to add lifetimes after the new release.
+        """
+
+        return _vector2DIter[__lifetime_of(self), dtype](
+            array=self,
+            length=self.size,
+        )
+
+    fn __reversed__(
+        self,
+    ) raises -> _vector2DIter[__lifetime_of(self), dtype, forward=False]:
+        """Iterate backwards over elements of the Vector3D, returning
+        copied value.
+
+        Returns:
+            A reversed iterator of Vector3D elements.
+        """
+
+        return _vector2DIter[__lifetime_of(self), dtype, forward=False](
+            array=self,
+            length=self.size,
+        )
+
+    fn __pos__(self) -> Self:
         return self*(1.0)
 
-    fn __neg__(inout self) -> Self:
+    fn __neg__(self) -> Self:
         return self*(-1.0)
-
-    fn __eq__(self, other: Self) -> Bool:
-        return self.data == other.data
-
-    # ARITHMETICS
     
-    fn __add__(inout self, other:Scalar[dtype]) -> Self:
-        return self._elementwise_scalar_arithmetic[math.add](other)
+    fn load[width: Int = 1](self, idx: Int) -> SIMD[dtype, width]:
+        """
+        SIMD load elements.
+        """
+        return self.data.load[width = width](idx)
 
-    fn __add__(inout self, other:Self) -> Self:
-        return self._elementwise_array_arithmetic[math.add](other)
+    fn store[width: Int = 1](self, idx: Int, val: SIMD[dtype, width]):
+        """
+        SIMD store elements.
+        """
+        self.data.store[width = width](idx, val)
+    
+    fn unsafe_ptr(self) -> DTypePointer[dtype, 0]:
+        """
+        Retreive pointer without taking ownership.
+        """
+        return self.data
+        
+    fn typeof(inout self) -> DType:
+        return dtype
 
-    fn __radd__(inout self, s: Scalar[dtype])->Self:
-        return self + s
+    fn typeof_str(inout self) -> String:
+        return dtype.__str__()
+    
+    """COMPARISIONS."""
+    @always_inline("nodebug")
+    fn __eq__(self, other: Self) raises -> Vector3D[DType.bool]:
+        """
+        Itemwise equivelence.
+        """
+        return mf.compare_2_vectors[dtype, SIMD.__eq__](self, other)
 
-    fn __iadd__(inout self, s: Scalar[dtype]):
-        self = self + s
+    @always_inline("nodebug")
+    fn __eq__(self, other: SIMD[dtype, 1]) raises -> Vector3D[DType.bool]:
+        """
+        Itemwise equivelence between scalar and Array.
+        """
+        return mf.compare_vector_and_scalar[dtype, SIMD.__eq__](self, other)
 
-    fn _sub__(inout self, other:Scalar[dtype]) -> Self:
-        return self._elementwise_scalar_arithmetic[math.sub](other)
+    @always_inline("nodebug")
+    fn __ne__(self, other: Vector3D[dtype]) raises -> Vector3D[DType.bool]:
+        """
+        Itemwise nonequivelence between scalar and Array.
+        """
+        return mf.compare_2_vectors[dtype, SIMD.__ne__](self, other)
 
-    fn __sub__(inout self, other:Self) -> Self:
-        return self._elementwise_array_arithmetic[math.sub](other)
+    @always_inline("nodebug")
+    fn __ne__(self, other: SIMD[dtype, 1]) raises -> Vector3D[DType.bool]:
+        """
+        Itemwise nonequivelence.
+        """
+        return mf.compare_vector_and_scalar[dtype, SIMD.__ne__](self, other)
 
-    # TODO: I don't know why I am getting error here, so do this later.
-    # fn __rsub__(inout self, s: Scalar[dtype])->Self:
-    #     return -(self - s)
+    @always_inline("nodebug")
+    fn __lt__(self, other: Vector3D[dtype]) raises -> Vector3D[DType.bool]:
+        """
+        Itemwise less than between scalar and Array.
+        """
+        return mf.compare_2_vectors[dtype, SIMD.__lt__](self, other)
+    
+    @always_inline("nodebug")
+    fn __lt__(self, other: SIMD[dtype, 1]) raises -> Vector3D[DType.bool]:
+        """
+        Itemwise less than.
+        """
+        return mf.compare_vector_and_scalar[dtype, SIMD.__lt__](self, other)
 
-    fn __isub__(inout self, s: Scalar[dtype]):
-        self = self-s
+    @always_inline("nodebug")
+    fn __le__(self, other: Vector3D[dtype]) raises -> Vector3D[DType.bool]:
+        """
+        Itemwise less than or equal to between scalar and Array.
+        """
+        return mf.compare_2_vectors[dtype, SIMD.__le__](self, other)
 
-    fn __mul__(self, s: Scalar[dtype])->Self:
-        return self._elementwise_scalar_arithmetic[math.mul](s)
+    @always_inline("nodebug")
+    fn __le__(self, other: SIMD[dtype, 1]) raises -> Vector3D[DType.bool]:
+        """
+        Itemwise less than or equal to.
+        """
+        return mf.compare_vector_and_scalar[dtype, SIMD.__le__](self, other)
+
+    @always_inline("nodebug")
+    fn __gt__(self, other: Vector3D[dtype]) raises -> Vector3D[DType.bool]:
+        """
+        Itemwise greater than between scalar and Array.
+        """
+        return mf.compare_2_vectors[dtype, SIMD.__gt__](self, other)
+
+    @always_inline("nodebug")
+    fn __gt__(self, other: SIMD[dtype, 1]) raises -> Vector3D[DType.bool]:
+        """
+        Itemwise greater than.
+        """
+        return mf.compare_vector_and_scalar[dtype, SIMD.__gt__](self, other)
+
+    @always_inline("nodebug")
+    fn __ge__(self, other: Vector3D[dtype]) raises -> Vector3D[DType.bool]:
+        """
+        Itemwise less than or equal to between scalar and Array.
+        """
+        return mf.compare_2_vectors[dtype, SIMD.__ge__](self, other)
+
+    @always_inline("nodebug")
+    fn __ge__(self, other: SIMD[dtype, 1]) raises -> Vector3D[DType.bool]:
+        """
+        Itemwise greater than or equal to.
+        """
+        return mf.compare_vector_and_scalar[dtype, SIMD.__ge__](self, other)
+
+    """COMPARISIONS."""
+    fn __add__(self, other:Scalar[dtype]) -> Self:
+        return mf.elementwise_scalar_arithmetic[dtype, SIMD.__add__](self, other)
+
+    fn __add__(self, other:Self) -> Self:
+        return mf.elementwise_array_arithmetic[dtype, SIMD.__add__](self, other)
+
+    fn __radd__(self, other: Scalar[dtype])->Self:
+        return self + other
+
+    fn __iadd__(inout self, other: Scalar[dtype]):
+        self = self + other
+    
+    fn __sub__(self, other:Scalar[dtype]) -> Self:
+        return mf.elementwise_scalar_arithmetic[dtype, SIMD.__sub__](self, other)
+
+    fn __sub__(self, other:Self) -> Self:
+        return mf.elementwise_array_arithmetic[dtype, SIMD.__sub__](self, other)
+
+    fn __rsub__(self, other: Scalar[dtype])->Self:
+        return -(self - other)
+
+    fn __isub__(inout self, other: Scalar[dtype]):
+        self = self-other
+
+    fn __mul__(self, other: Scalar[dtype])->Self:
+        return mf.elementwise_scalar_arithmetic[dtype, SIMD.__mul__](self, other)
 
     fn __mul__(self, other: Self)->Self:
-        return self._elementwise_array_arithmetic[math.mul](other)
+        return mf.elementwise_array_arithmetic[dtype, SIMD.__mul__](self, other)
 
-    fn __rmul__(self, s: Scalar[dtype])->Self:
-        return self*s
+    fn __rmul__(self, other: Scalar[dtype])->Self:
+        return self*other
 
-    fn __imul__(inout self, s: Scalar[dtype]):
-        self = self*s
+    fn __imul__(inout self, other: Scalar[dtype]):
+        self = self*other
 
-    fn __matmul__(inout self, other:Self) -> Scalar[dtype]:
-        return self._elementwise_array_arithmetic[math.mul](other)._reduce_sum()
+    # * since "*" already does element wise calculation, I think matmul is redundant for 1D array, but I could use it for dot products
+    # fn __matmul__(inout self, other:Self) -> Scalar[dtype]: 
+    #     return self._elementwise_array_arithmetic[SIMD.__mul__](other)._reduce_sum()
 
     fn __pow__(self, p: Int)->Self:
         return self._elementwise_pow(p)
@@ -895,18 +1133,18 @@ struct Vector2D[dtype: DType = DType.float64](
 
     fn _elementwise_pow(self, p: Int) -> Self:
         alias simd_width: Int = simdwidthof[dtype]()
-        var new_vec = Self(self.size)
+        var new_vec = Self()
         @parameter
         fn tensor_scalar_vectorize[simd_width: Int](idx: Int) -> None:
-            new_vec.data.store[width=simd_width](idx, math.pow(self.data.load[width=simd_width](idx), p))
+            new_vec.data.store[width=simd_width](idx, pow(self.data.load[width=simd_width](idx), p))
         vectorize[tensor_scalar_vectorize, simd_width](self.size)
         return new_vec
 
-    fn __truediv__(inout self, s: Scalar[dtype]) -> Self:
-        return self._elementwise_scalar_arithmetic[math.div](s)
+    fn __truediv__(inout self, other: Scalar[dtype]) -> Self:
+        return mf.elementwise_scalar_arithmetic[dtype, SIMD.__truediv__](self, other)
 
     fn __truediv__(inout self, other:Self) -> Self:
-        return self._elementwise_array_arithmetic[math.div](other)
+        return mf.elementwise_array_arithmetic[dtype, SIMD.__truediv__](self, other)
 
     fn __itruediv__(inout self, s: Scalar[dtype]):
         self = self.__truediv__(s)
