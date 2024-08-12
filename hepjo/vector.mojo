@@ -1,83 +1,98 @@
-from builtin.dtype import DType
-from tensor import Tensor, TensorShape
-import math
-from testing import assert_raises
 from builtin.math import pow
-
 from sys.intrinsics import _mlirtype_is_eq
 from algorithm.functional import elementwise
 from algorithm import vectorize
+from collections import StaticIntTuple
 
 from .constants import pi
 
 ################################################################################################################
-####################################### VECTOR 2D ##############################################################
+####################################### VECTOR 3D ##############################################################
 ################################################################################################################
 
 @register_passable("trivial")
 struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized, Stringable): 
-    var _ptr: DTypePointer[dtype]
-    var _size: Int
+    # Fields
+    var data: DTypePointer[dtype]
+    """3D vector data."""
+    alias size: Int = 3
+    """The size of the Vector."""
 
-    # Constructors
+    """ Default constructor """
+    @always_inline("nodebug")
     fn __init__(inout self):
-        # default constructor
-        self._size = 3
-        self._ptr =  DTypePointer[dtype].alloc(self._size)
-        memset_zero(self._ptr, self._size)
+        """
+        Initializes a 3D vector with zero elements.
+        """
+        self.data =  DTypePointer[dtype].alloc(self.size)
+        memset_zero(self.data, self.size)
 
-    fn __init__(inout self, *data:Scalar[dtype]):
-        self._size = 3
-        self._ptr = DTypePointer[dtype].alloc(self._size)
-        for i in range(self._size):
-            self._ptr[i] = data[i]
+    # @always_inline("nodebug")
+    # fn __init__[data: Int](inout self) raises:
+    #     """
+    #     Initializes a 3D vector with the given elements.
+    #     """
+    #     constrained[data != self.size, "Length of the input should be 3."]()
+    #     self.data = DTypePointer[dtype].alloc(self.size)
+    #     @parameter
+    #     for i in range(self.size):
+    #         self.data[i] = data
+
+    @always_inline("nodebug")
+    fn __init__(inout self, *data:Scalar[dtype]) raises:
+        """
+        Initializes a 3D vector with the given elements.
+        """
+        if len(data) != self.size:
+            raise Error("Length of input should be 3")
+        self.data = DTypePointer[dtype].alloc(self.size)
+        for i in range(self.size):
+            self.data[i] = data[i]
+
+    @always_inline("nodebug")
+    fn __init__(inout self, data:List[Scalar[dtype]]) raises:
+        """
+        Initializes a 3D vector with the given elements.
+        """
+        if len(data) != self.size:
+            raise Error("Length of input should be 3")
+        self.data = DTypePointer[dtype].alloc(self.size)
+        for i in range(self.size):
+            self.data[i] = data[i]
 
     fn __init__(inout self, x:Scalar[dtype], y:Scalar[dtype], z:Scalar[dtype]):
-        self._size = 3
-        self._ptr = DTypePointer[dtype].alloc(self._size)
-        self._ptr[0] = x
-        self._ptr[1] = y
-        self._ptr[2] = z
+        self.data = DTypePointer[dtype].alloc(self.size)
+        self.data[0] = x
+        self.data[1] = y
+        self.data[2] = z
 
-    fn __init__(inout self, _ptr: DTypePointer[dtype]):
-        self._size = 3
-        self._ptr = _ptr
-
-    # fn __copyinit__(inout self, new: Self):
-    #     self._size = new._size
-    #     self._ptr = new._ptr
-
-    # fn __moveinit__(inout self, owned existing: Self):
-    #     self._size = existing._size
-    #     self._ptr = existing._ptr
-    #     existing._ptr = DTypePointer[dtype]() # ! maybe I should use .free()?
-        # existing._ptr.free()
+    fn __init__(inout self, data: DTypePointer[dtype]):
+        self.data = data
 
     # TODO: I have used a print block and return 0 for invalid index, there's clash between Stringable and raises if I add a raise Error.
-    fn __getitem__(self, index:Int) -> Scalar[dtype]:
+    fn __getitem__(self, index:Int) raises -> Scalar[dtype]:
         if index >= 3 or index < 0:
-            print("Invalid index: index exceeds size, returning zero")
-            return Scalar[dtype](0)
+            raise Error("Invalid index: index exceeds size, returning zero")
         else:
-            return self._ptr.load[width=1](index)
+            return self.data.load[width=1](index)
 
     fn __setitem__(inout self, index:Int, value:Scalar[dtype]):
-        self._ptr.store[width=1](index, value)
-
-    # fn __del__(owned self):
-    #     self._ptr.free()
+        self.data.store[width=1](index, value)
 
     fn __len__(self) -> Int:
-        return self._size
+        return self.size
 
     fn __int__(self) -> Int:
-        return self._size
+        return self.size
 
     fn __str__(self: Vector3D[dtype]) -> String:
         var printStr:String = "["
         var prec:Int=4
-        for i in range(self._size):
-            var val = self[i]
+        for i in range(self.size):
+            try:
+                var val = self[i]
+            except:
+                var val = 0
             @parameter
             if _mlirtype_is_eq[Scalar[dtype], Float64]():
                 var s: String = ""
@@ -102,7 +117,7 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
                     printStr+="  "+str(val)
 
         printStr+="], "
-        printStr+= "dtype="+str(dtype)+", "+"Length="+str(self._size)
+        printStr+= "dtype="+str(dtype)+", "+"Length="+str(self.size)
         return printStr
 
     fn print(inout self) raises -> None:
@@ -110,7 +125,7 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         print()
 
     fn __repr__(inout self) -> String:
-        return "Vector3D(x="+str(self._ptr[0])+", y="+str(self._ptr[1])+", z="+str(self._ptr[2])+")"
+        return "Vector3D(x="+str(self.data[0])+", y="+str(self.data[1])+", z="+str(self.data[2])+")"
 
     # TODO: Implement iterator for Vector3D
     # fn __iter__(inout self) -> Self:
@@ -119,11 +134,11 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
 
     # fn __next__(inout self) -> Scalar[dtype]:
     #     self.index += 1
-    #     if self.index == self._size:
+    #     if self.index == self.size:
     #         # return Optional[Scalar[dtype]]()
     #         return Scalar[dtype]()
     #     else:
-    #         return self._ptr[self.index]
+    #         return self.data[self.index]
 
     fn __pos__(self) -> Self:
         return self*(1.0)
@@ -132,7 +147,7 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         return self*(-1.0)
 
     fn __eq__(self, other: Self) -> Bool:
-        return self._ptr == other._ptr
+        return self.data == other.data
 
     # ARITHMETICS
     fn __add__(self, other:Scalar[dtype]) -> Self:
@@ -183,11 +198,11 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
 
     fn _elementwise_pow(self, p: Int) -> Self:
         alias simd_width: Int = simdwidthof[dtype]()
-        var new_vec = Self(self._size)
+        var new_vec = Self(self.size)
         @parameter
         fn tensor_scalar_vectorize[simd_width: Int](idx: Int) -> None:
-            new_vec._ptr.store[width=simd_width](idx, pow(self._ptr.load[width=simd_width](idx), p))
-        vectorize[tensor_scalar_vectorize, simd_width](self._size)
+            new_vec.data.store[width=simd_width](idx, pow(self.data.load[width=simd_width](idx), p))
+        vectorize[tensor_scalar_vectorize, simd_width](self.size)
         return new_vec
 
     fn __truediv__(inout self, s: Scalar[dtype]) -> Self:
@@ -254,7 +269,7 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         Args:
             x: The new value for the x-component.
         """
-        self._ptr[0] = x
+        self.data[0] = x
 
     fn x(inout self) -> Scalar[dtype]:
         """
@@ -263,7 +278,7 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         Returns:
             The value of the x-component.
         """
-        return self._ptr[0]
+        return self.data[0]
 
     fn y(inout self, y:Scalar[dtype]):
         """
@@ -272,7 +287,7 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         Args:
             y: The new value for the y-component.
         """
-        self._ptr[1] = y
+        self.data[1] = y
 
     fn y(inout self) -> Scalar[dtype]:
         """
@@ -281,7 +296,7 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         Returns:
             The value of the y-component.
         """
-        return self._ptr[1]
+        return self.data[1]
 
     fn z(inout self, z:Scalar[dtype]):
         """
@@ -290,7 +305,7 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         Args:
             z: The new value for the z-component.
         """
-        self._ptr[2] = z
+        self.data[2] = z
 
     fn z(inout self) -> Scalar[dtype]:
         """
@@ -299,7 +314,7 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         Returns:
             The value of the z-component.
         """
-        return self._ptr[2]
+        return self.data[2]
 
     # TODO: Implement @property decorator
     fn rho(inout self) -> Scalar[dtype]:
@@ -318,7 +333,7 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         Returns:
             The magnitude of the vector, calculated as sqrt(x^2 + y^2 + z^2).
         """
-        return math.sqrt(self._ptr[0]**2 + self._ptr[1]**2 + self._ptr[2]**2)
+        return math.sqrt(self.data[0]**2 + self.data[1]**2 + self.data[2]**2)
 
     fn r(inout self) -> Scalar[dtype]:
         """
@@ -339,7 +354,7 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         if self.mag() == 0.0:
             return 1.0
         else:
-            return self._ptr[2]/self.mag()
+            return self.data[2]/self.mag()
 
     fn theta(inout self, degree:Bool=False) -> Scalar[dtype]:
         """
@@ -367,7 +382,7 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         Returns:
             The angle phi in radians or degrees.
         """
-        var phi = math.atan2(self._ptr[1], self._ptr[0])
+        var phi = math.atan2(self.data[1], self.data[0])
         if degree == True:
             return phi * 180 / Scalar[dtype](pi)
         else:
@@ -382,9 +397,9 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
             y: The new value for the y-component.
             z: The new value for the z-component.
         """
-        self._ptr[0] = x
-        self._ptr[1] = y
-        self._ptr[2] = z
+        self.data[0] = x
+        self.data[1] = y
+        self.data[2] = z
 
     fn tolist(self) -> List[Scalar[dtype]]:
         """
@@ -393,7 +408,7 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         Returns:
             A list containing the scalar components of the vector.
         """
-        return List[Scalar[dtype]](self._ptr[0], self._ptr[1], self._ptr[2])
+        return List[Scalar[dtype]](self.data[0], self.data[1], self.data[2])
 
     fn mag2(self) -> Scalar[dtype]:
         """
@@ -402,7 +417,7 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         Returns:
             The squared magnitude of the vector.
         """
-        return self._ptr[0]**2 + self._ptr[1]**2 + self._ptr[2]**2
+        return self.data[0]**2 + self.data[1]**2 + self.data[2]**2
 
     fn __abs__(inout self) -> Scalar[dtype]:
         """
@@ -420,7 +435,7 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         Returns:
             A new instance of the vector with the same components.
         """
-        return Self(self._ptr[0], self._ptr[1], self._ptr[2])
+        return Self(self.data[0], self.data[1], self.data[2])
 
     fn unit(inout self) -> Self:
         """
@@ -433,7 +448,7 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         if mag_temp == 1.0:
             return self
         else:
-            return Self(self._ptr[0]/mag_temp, self._ptr[1]/mag_temp, self._ptr[2]/mag_temp)
+            return Self(self.data[0]/mag_temp, self.data[1]/mag_temp, self.data[2]/mag_temp)
 
     fn __nonzero__(inout self) -> Bool:
         """
@@ -475,9 +490,9 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         Returns:
             A new vector that is the cross product of this vector and the other vector.
         """
-        return Self(self._ptr[1]*other._ptr[2] - self._ptr[2]*other._ptr[1],
-                    self._ptr[2]*other._ptr[0] - self._ptr[0]*other._ptr[2],
-                    self._ptr[0]*other._ptr[1] - self._ptr[1]*other._ptr[0])
+        return Self(self.data[1]*other.data[2] - self.data[2]*other.data[1],
+                    self.data[2]*other.data[0] - self.data[0]*other.data[2],
+                    self.data[0]*other.data[1] - self.data[1]*other.data[0])
 
     #TODO: Gotta check this function, It returns non sense values for now lol
     # fn rotate(self, inout axis: Self, angle: Scalar[dtype]) raises:
@@ -486,19 +501,19 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
     #     var cos_theta = math.cos(angle)
     #     var sin_theta = math.sin(angle)
 
-    #     var x_new = self._ptr[0] * (u[0]*u[0] * (1 - cos_theta) + cos_theta) +
-    #                 self._ptr[1] * (u[0]*u[1] * (1 - cos_theta) - u[2]*sin_theta) +
-    #                 self._ptr[2] * (u[0]*u[2] * (1 - cos_theta) + u[1]*sin_theta)
-    #     var y_new = self._ptr[0] * (u[0]*u[1] * (1 - cos_theta) + u[2]*sin_theta) +
-    #                 self._ptr[1] * (u[1]*u[1] * (1 - cos_theta) + cos_theta) +
-    #                 self._ptr[2] * (u[1]*u[2] * (1 - cos_theta) - u[0]*sin_theta)
-    #     var z_new = self._ptr[0] * (u[0]*u[2] * (1 - cos_theta) - u[1]*sin_theta) +
-    #                 self._ptr[1] * (u[1]*u[2] * (1 - cos_theta) + u[0]*sin_theta) +
-    #                 self._ptr[2] * (u[2]*u[2] * (1 - cos_theta) + cos_theta)
+    #     var x_new = self.data[0] * (u[0]*u[0] * (1 - cos_theta) + cos_theta) +
+    #                 self.data[1] * (u[0]*u[1] * (1 - cos_theta) - u[2]*sin_theta) +
+    #                 self.data[2] * (u[0]*u[2] * (1 - cos_theta) + u[1]*sin_theta)
+    #     var y_new = self.data[0] * (u[0]*u[1] * (1 - cos_theta) + u[2]*sin_theta) +
+    #                 self.data[1] * (u[1]*u[1] * (1 - cos_theta) + cos_theta) +
+    #                 self.data[2] * (u[1]*u[2] * (1 - cos_theta) - u[0]*sin_theta)
+    #     var z_new = self.data[0] * (u[0]*u[2] * (1 - cos_theta) - u[1]*sin_theta) +
+    #                 self.data[1] * (u[1]*u[2] * (1 - cos_theta) + u[0]*sin_theta) +
+    #                 self.data[2] * (u[2]*u[2] * (1 - cos_theta) + cos_theta)
 
-    #     self._ptr[0] = x_new
-    #     self._ptr[1] = y_new
-    #     self._ptr[2] = z_new
+    #     self.data[0] = x_new
+    #     self.data[1] = y_new
+    #     self.data[2] = z_new
 
     fn rotate_x(inout self, angle: Scalar[dtype]):
         """
@@ -507,13 +522,13 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         Args:
             angle: The angle in radians by which to rotate the vector around the X-axis.
         """
-        var x_new = self._ptr[0]
-        var y_new = self._ptr[1]*math.cos(angle) - self._ptr[2]*math.sin(angle)
-        var z_new = self._ptr[1]*math.sin(angle) + self._ptr[2]*math.cos(angle)
+        var x_new = self.data[0]
+        var y_new = self.data[1]*math.cos(angle) - self.data[2]*math.sin(angle)
+        var z_new = self.data[1]*math.sin(angle) + self.data[2]*math.cos(angle)
 
-        self._ptr[0] = x_new
-        self._ptr[1] = y_new
-        self._ptr[2] = z_new
+        self.data[0] = x_new
+        self.data[1] = y_new
+        self.data[2] = z_new
 
     fn rotate_y(inout self, angle: Scalar[dtype]):
         """
@@ -522,13 +537,13 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         Args:
             angle: The angle in radians by which to rotate the vector around the Y-axis.
         """
-        var x_new = self._ptr[0]*math.cos(angle) + self._ptr[2]*math.sin(angle)
-        var y_new = self._ptr[1]
-        var z_new = -self._ptr[0]*math.sin(angle) + self._ptr[2]*math.cos(angle)
+        var x_new = self.data[0]*math.cos(angle) + self.data[2]*math.sin(angle)
+        var y_new = self.data[1]
+        var z_new = -self.data[0]*math.sin(angle) + self.data[2]*math.cos(angle)
 
-        self._ptr[0] = x_new
-        self._ptr[1] = y_new
-        self._ptr[2] = z_new
+        self.data[0] = x_new
+        self.data[1] = y_new
+        self.data[2] = z_new
 
     fn rotate_z(inout self, angle: Scalar[dtype]):
         """
@@ -537,13 +552,13 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         Args:
             angle: The angle in radians by which to rotate the vector around the Z-axis.
         """
-        var x_new = self._ptr[0]*math.cos(angle) - self._ptr[1]*math.sin(angle)
-        var y_new = self._ptr[0]*math.sin(angle) + self._ptr[1]*math.cos(angle)
-        var z_new = self._ptr[2]
+        var x_new = self.data[0]*math.cos(angle) - self.data[1]*math.sin(angle)
+        var y_new = self.data[0]*math.sin(angle) + self.data[1]*math.cos(angle)
+        var z_new = self.data[2]
 
-        self._ptr[0] = x_new
-        self._ptr[1] = y_new
-        self._ptr[2] = z_new     
+        self.data[0] = x_new
+        self.data[1] = y_new
+        self.data[2] = z_new     
 
     fn cos_angle(inout self, inout other:Self) -> Scalar[dtype]:
         """
@@ -626,11 +641,11 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
             A new instance of the vector where each element is the result of applying the arithmetic operation between the scalar `s` and the corresponding element of the original vector.
         """
         alias simd_width: Int = simdwidthof[dtype]()
-        var new_array = Self(self._size)
+        var new_array = Self(self.size)
         @parameter
         fn elemwise_vectorize[simd_width: Int](idx: Int) -> None:
-            new_array._ptr.store[width=simd_width](idx, function[dtype, simd_width](SIMD[dtype, simd_width](s), self._ptr.load[width=simd_width](idx)))
-        vectorize[elemwise_vectorize, simd_width](self._size)
+            new_array.data.store[width=simd_width](idx, function[dtype, simd_width](SIMD[dtype, simd_width](s), self.data.load[width=simd_width](idx)))
+        vectorize[elemwise_vectorize, simd_width](self.size)
         return new_array
 
     
@@ -653,9 +668,9 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         var new_vec = Self()
         @parameter
         fn vectorized_arithmetic[simd_width:Int](index: Int) -> None:
-            new_vec._ptr.store[width=simd_width](index, function[dtype, simd_width](self._ptr.load[width=simd_width](index), other._ptr.load[width=simd_width](index)))
+            new_vec.data.store[width=simd_width](index, function[dtype, simd_width](self.data.load[width=simd_width](index), other.data.load[width=simd_width](index)))
 
-        vectorize[vectorized_arithmetic, simd_width](self._size)
+        vectorize[vectorized_arithmetic, simd_width](self.size)
         return new_vec
 
     fn _elementwise_function_arithmetic[func: fn[dtype: DType, width: Int](SIMD[dtype, width])->SIMD[dtype, width]](self) -> Self:
@@ -674,9 +689,9 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         var new_vec = Self()
         @parameter
         fn vectorized_arithmetic[simd_width:Int](index: Int) -> None:
-            new_vec._ptr.store[width=simd_width](index, func[dtype, simd_width](self._ptr.load[width=simd_width](index)))
+            new_vec.data.store[width=simd_width](index, func[dtype, simd_width](self.data.load[width=simd_width](index)))
 
-        vectorize[vectorized_arithmetic, simd_width](self._size)
+        vectorize[vectorized_arithmetic, simd_width](self.size)
         return new_vec
 
     fn act[function: fn[type:DType, simd_width:Int](SIMD[type, simd_width]) -> SIMD[type,simd_width]](inout self) -> Self:
@@ -706,13 +721,13 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         alias simd_width: Int = simdwidthof[dtype]()
         @parameter
         fn vectorize_reduce[simd_width: Int](idx: Int) -> None:
-            reduced[0] += self._ptr.load[width = simd_width](idx).reduce_add()
-        vectorize[vectorize_reduce, simd_width](self._size)
+            reduced[0] += self.data.load[width = simd_width](idx).reduce_add()
+        vectorize[vectorize_reduce, simd_width](self.size)
         return reduced
     
     fn to_tensor(inout self) raises -> Tensor[dtype]:
-        var t = Tensor[dtype](self._size)
-        for i in range(self._size):
+        var t = Tensor[dtype](self.size)
+        for i in range(self.size):
             t[i] = self[i]
         return t
 
@@ -723,56 +738,56 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
 struct Vector2D[dtype: DType = DType.float64](
     Intable, CollectionElement, Sized, Stringable
     ):
-    var _ptr: DTypePointer[dtype]
-    var _size: Int
+    var data: DTypePointer[dtype]
+    var size: Int
 
     # Constructors
     # * I need to figure out how to assign the datatype given by user if possible
     fn __init__(inout self):
         # default constructor
-        self._size = 2
-        self._ptr =  DTypePointer[dtype].alloc(self._size)
-        memset_zero(self._ptr, self._size)
+        self.size = 2
+        self.data =  DTypePointer[dtype].alloc(self.size)
+        memset_zero(self.data, self.size)
 
     fn __init__(inout self, *data:Scalar[dtype]):
-        self._size = 2
+        self.size = 2
 
-        self._ptr = DTypePointer[dtype].alloc(self._size)
-        for i in range(self._size):
-            self._ptr[i] = data[i]
+        self.data = DTypePointer[dtype].alloc(self.size)
+        for i in range(self.size):
+            self.data[i] = data[i]
 
-    fn __init__(inout self, _ptr: DTypePointer[dtype]):
-        self._size = 2
-        self._ptr = _ptr
+    fn __init__(inout self, data: DTypePointer[dtype]):
+        self.size = 2
+        self.data = data
 
     fn __copyinit__(inout self, new: Self):
-        self._size = new._size
-        self._ptr = new._ptr
+        self.size = new.size
+        self.data = new.data
 
     fn __moveinit__(inout self, owned existing: Self):
-        self._size = existing._size
-        self._ptr = existing._ptr
-        existing._ptr = DTypePointer[dtype]()
+        self.size = existing.size
+        self.data = existing.data
+        existing.data = DTypePointer[dtype]()
 
     fn __getitem__(self, index:Int) -> Scalar[dtype]:
-        return self._ptr.load[width=1](index)
+        return self.data.load[width=1](index)
 
     fn __setitem__(inout self, index:Int, value:Scalar[dtype]):
-        self._ptr.store[width=1](index, value)
+        self.data.store[width=1](index, value)
 
     fn __del__(owned self):
-        self._ptr.free()
+        self.data.free()
 
     fn __len__(self) -> Int:
-        return self._size
+        return self.size
 
     fn __int__(self) -> Int:
-        return self._size
+        return self.size
 
     fn __str__(self) -> String:
         var printStr:String = "["
         var prec:Int=4
-        for i in range(self._size):
+        for i in range(self.size):
             var val = self[i]
             @parameter
             if _mlirtype_is_eq[Scalar[dtype], Float64]():
@@ -798,7 +813,7 @@ struct Vector2D[dtype: DType = DType.float64](
                     printStr+="  "+str(val)
 
         printStr+="]\n"
-        printStr+="Length:"+str(self._size)+","+" DType:"+str(dtype)
+        printStr+="Length:"+str(self.size)+","+" DType:"+str(dtype)
         return printStr
 
     fn print(self) -> None:
@@ -806,7 +821,7 @@ struct Vector2D[dtype: DType = DType.float64](
         print()
 
     fn __repr__(inout self) -> String:
-        return "Vector2D(x="+str(self._ptr[0])+", y="+str(self._ptr[1])+")"
+        return "Vector2D(x="+str(self.data[0])+", y="+str(self.data[1])+")"
 
     # TODO: Implement iterator for Vector3D, I am not sure how to end the loop in __next__ method.
     # fn __iter__(inout self) -> Self:
@@ -815,11 +830,11 @@ struct Vector2D[dtype: DType = DType.float64](
 
     # fn __next__(inout self) -> Scalar[dtype]:
     #     self.index += 1
-    #     if self.index == self._size:
+    #     if self.index == self.size:
     #         # return Optional[Scalar[dtype]]()
     #         return Scalar[dtype]()
     #     else:
-    #         return self._ptr[self.index]
+    #         return self.data[self.index]
 
     fn __pos__(inout self) -> Self:
         return self*(1.0)
@@ -828,7 +843,7 @@ struct Vector2D[dtype: DType = DType.float64](
         return self*(-1.0)
 
     fn __eq__(self, other: Self) -> Bool:
-        return self._ptr == other._ptr
+        return self.data == other.data
 
     # ARITHMETICS
     
@@ -880,11 +895,11 @@ struct Vector2D[dtype: DType = DType.float64](
 
     fn _elementwise_pow(self, p: Int) -> Self:
         alias simd_width: Int = simdwidthof[dtype]()
-        var new_vec = Self(self._size)
+        var new_vec = Self(self.size)
         @parameter
         fn tensor_scalar_vectorize[simd_width: Int](idx: Int) -> None:
-            new_vec._ptr.store[width=simd_width](idx, math.pow(self._ptr.load[width=simd_width](idx), p))
-        vectorize[tensor_scalar_vectorize, simd_width](self._size)
+            new_vec.data.store[width=simd_width](idx, math.pow(self.data.load[width=simd_width](idx), p))
+        vectorize[tensor_scalar_vectorize, simd_width](self.size)
         return new_vec
 
     fn __truediv__(inout self, s: Scalar[dtype]) -> Self:
@@ -945,7 +960,7 @@ struct Vector2D[dtype: DType = DType.float64](
         Parameters:
             x: The new value for the x-component.
         """
-        self._ptr[0] = x
+        self.data[0] = x
 
     fn x(inout self) -> Scalar[dtype]:
         """
@@ -954,7 +969,7 @@ struct Vector2D[dtype: DType = DType.float64](
         Returns:
             The value of the x-component.
         """
-        return self._ptr[0]
+        return self.data[0]
 
     fn y(inout self, y:Scalar[dtype]):
         """
@@ -963,7 +978,7 @@ struct Vector2D[dtype: DType = DType.float64](
         Parameters:
             y: The new value for the y-component.
         """
-        self._ptr[1] = y
+        self.data[1] = y
 
     fn y(inout self) -> Scalar[dtype]:
         """
@@ -972,7 +987,7 @@ struct Vector2D[dtype: DType = DType.float64](
         Returns:
             The value of the y-component.
         """
-        return self._ptr[1]
+        return self.data[1]
 
     # TODO: Implement @property decorator
     fn rho(inout self) -> Scalar[dtype]:
@@ -991,7 +1006,7 @@ struct Vector2D[dtype: DType = DType.float64](
         Returns:
             The magnitude of the vector, calculated as sqrt(x^2 + y^2 + z^2).
         """
-        return math.sqrt(self._ptr[0]**2 + self._ptr[1]**2)
+        return math.sqrt(self.data[0]**2 + self.data[1]**2)
 
     fn r(inout self) -> Scalar[dtype]:
         """
@@ -1006,26 +1021,30 @@ struct Vector2D[dtype: DType = DType.float64](
         """
         Calculates the angle phi in the xy-plane from the positive x-axis.
 
-        Parameters:
+        Args:
             degree: If True, returns the angle in degrees, otherwise in radians.
 
         Returns:
             The angle phi in radians or degrees.
         """
-        var phi = math.atan2(self._ptr[1], self._ptr[0])
+        var phi = math.atan2(self.data[1], self.data[0])
         if degree == True:
-         
+            return phi * 180 / Scalar[dtype](pi)
+        else:
+            return phi
+
+            
     fn set(inout self, x:Scalar[dtype], y:Scalar[dtype]):
         """
         Sets the vector components to the specified values.
 
-        Parameters:
+        Args:
             x: The new value for the x-component.
             y: The new value for the y-component.
             z: The new value for the z-component.
         """
-        self._ptr[0] = x
-        self._ptr[1] = y
+        self.data[0] = x
+        self.data[1] = y
 
     fn tolist(self) -> List[Scalar[dtype]]:
         """
@@ -1034,7 +1053,7 @@ struct Vector2D[dtype: DType = DType.float64](
         Returns:
             A list containing the scalar components of the vector.
         """
-        return List[Scalar[dtype]](self._ptr[0], self._ptr[1])
+        return List[Scalar[dtype]](self.data[0], self.data[1])
 
     fn mag2(self) -> Scalar[dtype]:
         """
@@ -1043,7 +1062,7 @@ struct Vector2D[dtype: DType = DType.float64](
         Returns:
             The squared magnitude of the vector.
         """
-        return self._ptr[0]**2 + self._ptr[1]**2 
+        return self.data[0]**2 + self.data[1]**2 
 
     fn __abs__(inout self) -> Scalar[dtype]:
         """
@@ -1061,7 +1080,7 @@ struct Vector2D[dtype: DType = DType.float64](
         Returns:
             A new instance of the vector with the same components.
         """
-        return Self(self._ptr[0], self._ptr[1])
+        return Self(self.data[0], self.data[1])
 
     fn unit(inout self) -> Self:
         """
@@ -1074,7 +1093,7 @@ struct Vector2D[dtype: DType = DType.float64](
         if mag_temp == 1.0:
             return self
         else:
-            return Self(self._ptr[0]/mag_temp, self._ptr[1]/mag_temp)
+            return Self(self.data[0]/mag_temp, self.data[1]/mag_temp)
 
     fn __nonzero__(inout self) -> Bool:
         """
@@ -1116,7 +1135,7 @@ struct Vector2D[dtype: DType = DType.float64](
         Returns:
             A new vector that is the cross product of this vector and the other vector.
         """
-        return self._ptr[0] * other._ptr[1] - self._ptr[1] * other._ptr[0]
+        return self.data[0] * other.data[1] - self.data[1] * other.data[0]
 
     #TODO: Gotta check this function, It returns non sense values for now lol
     fn rotate(self, inout axis: Self, angle: Scalar[dtype]):
@@ -1124,18 +1143,18 @@ struct Vector2D[dtype: DType = DType.float64](
         var cos_theta = math.cos(angle)
         var sin_theta = math.sin(angle)
 
-        var x_new = self._ptr[0] * (u[0]*u[0] * (1 - cos_theta) + cos_theta) +
-                    self._ptr[1] * (u[0]*u[1] * (1 - cos_theta) - u[2]*sin_theta) +
-                    self._ptr[2] * (u[0]*u[2] * (1 - cos_theta) + u[1]*sin_theta)
-        var y_new = self._ptr[0] * (u[0]*u[1] * (1 - cos_theta) + u[2]*sin_theta) +
-                    self._ptr[1] * (u[1]*u[1] * (1 - cos_theta) + cos_theta) +
-                    self._ptr[2] * (u[1]*u[2] * (1 - cos_theta) - u[0]*sin_theta)
-        var z_new = self._ptr[0] * (u[0]*u[2] * (1 - cos_theta) - u[1]*sin_theta) +
-                    self._ptr[1] * (u[1]*u[2] * (1 - cos_theta) + u[0]*sin_theta) +
-                    self._ptr[2] * (u[2]*u[2] * (1 - cos_theta) + cos_theta)
+        var x_new = self.data[0] * (u[0]*u[0] * (1 - cos_theta) + cos_theta) +
+                    self.data[1] * (u[0]*u[1] * (1 - cos_theta) - u[2]*sin_theta) +
+                    self.data[2] * (u[0]*u[2] * (1 - cos_theta) + u[1]*sin_theta)
+        var y_new = self.data[0] * (u[0]*u[1] * (1 - cos_theta) + u[2]*sin_theta) +
+                    self.data[1] * (u[1]*u[1] * (1 - cos_theta) + cos_theta) +
+                    self.data[2] * (u[1]*u[2] * (1 - cos_theta) - u[0]*sin_theta)
+        var z_new = self.data[0] * (u[0]*u[2] * (1 - cos_theta) - u[1]*sin_theta) +
+                    self.data[1] * (u[1]*u[2] * (1 - cos_theta) + u[0]*sin_theta) +
+                    self.data[2] * (u[2]*u[2] * (1 - cos_theta) + cos_theta)
 
-        self._ptr[0] = x_new
-        self._ptr[1] = y_new
+        self.data[0] = x_new
+        self.data[1] = y_new
 
     fn rotate_z(inout self, angle: Scalar[dtype]):
         """
@@ -1144,8 +1163,8 @@ struct Vector2D[dtype: DType = DType.float64](
         Parameters:
             angle: The angle in radians by which to rotate the vector around the Z-axis.
         """
-        var x_new = self._ptr[0]*math.cos(angle) - self._ptr[1]*math.sin(angle)
-        var y_new = self._ptr[0]*math.sin(angle) + self._ptr[1]*math.cos(angle)
+        var x_new = self.data[0]*math.cos(angle) - self.data[1]*math.sin(angle)
+        var y_new = self.data[0]*math.sin(angle) + self.data[1]*math.cos(angle)
         self.set(x_new, y_new)
 
     fn cos_angle(inout self, inout other:Self) -> Scalar[dtype]:
@@ -1214,11 +1233,11 @@ struct Vector2D[dtype: DType = DType.float64](
             A new instance of the vector where each element is the result of applying the arithmetic operation between the scalar `s` and the corresponding element of the original vector.
         """
         alias simd_width: Int = simdwidthof[dtype]()
-        var new_array = Self(self._size)
+        var new_array = Self(self.size)
         @parameter
         fn elemwise_vectorize[simd_width: Int](idx: Int) -> None:
-            new_array._ptr.store[width=simd_width](idx, func[dtype, simd_width](SIMD[dtype, simd_width](s), self._ptr.load[width=simd_width](idx)))
-        vectorize[elemwise_vectorize, simd_width](self._size)
+            new_array.data.store[width=simd_width](idx, func[dtype, simd_width](SIMD[dtype, simd_width](s), self.data.load[width=simd_width](idx)))
+        vectorize[elemwise_vectorize, simd_width](self.size)
         return new_array
 
     
@@ -1239,9 +1258,9 @@ struct Vector2D[dtype: DType = DType.float64](
         var new_vec = Self()
         @parameter
         fn vectorized_arithmetic[simd_width:Int](index: Int) -> None:
-            new_vec._ptr.store[width=simd_width](index, func[dtype, simd_width](self._ptr.load[width=simd_width](index), other._ptr.load[width=simd_width](index)))
+            new_vec.data.store[width=simd_width](index, func[dtype, simd_width](self.data.load[width=simd_width](index), other.data.load[width=simd_width](index)))
 
-        vectorize[vectorized_arithmetic, simd_width](self._size)
+        vectorize[vectorized_arithmetic, simd_width](self.size)
         return new_vec
 
     fn _elementwise_function_arithmetic[func: fn[dtype: DType, width: Int](SIMD[dtype, width])->SIMD[dtype, width]](self) -> Self:
@@ -1260,9 +1279,9 @@ struct Vector2D[dtype: DType = DType.float64](
         var new_vec = Self()
         @parameter
         fn vectorized_arithmetic[simd_width:Int](index: Int) -> None:
-            new_vec._ptr.store[width=simd_width](index, func[dtype, simd_width](self._ptr.load[width=simd_width](index)))
+            new_vec.data.store[width=simd_width](index, func[dtype, simd_width](self.data.load[width=simd_width](index)))
 
-        vectorize[vectorized_arithmetic, simd_width](self._size)
+        vectorize[vectorized_arithmetic, simd_width](self.size)
         return new_vec
 
     fn act[function: fn[type:DType, simd_width:Int](arg: SIMD[type, simd_width]) -> SIMD[type,simd_width]](inout self) -> Self:
@@ -1292,13 +1311,13 @@ struct Vector2D[dtype: DType = DType.float64](
         alias simd_width: Int = simdwidthof[dtype]()
         @parameter
         fn vectorize_reduce[simd_width: Int](idx: Int) -> None:
-            reduced[0] += self._ptr.load[width = simd_width](idx).reduce_add()
-        vectorize[vectorize_reduce, simd_width](self._size)
+            reduced[0] += self.data.load[width = simd_width](idx).reduce_add()
+        vectorize[vectorize_reduce, simd_width](self.size)
         return reduced
     
     fn to_tensor(self) -> Tensor[dtype]:
-        var t = Tensor[dtype](self._size)
-        for i in range(self._size):
+        var t = Tensor[dtype](self.size)
+        for i in range(self.size):
             t[i] = self[i]
         return t
 
