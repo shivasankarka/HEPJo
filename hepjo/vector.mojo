@@ -289,92 +289,92 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         """
         Itemwise equivelence.
         """
-        return mf.compare_2_vectors[dtype, SIMD.__eq__](self, other)
+        return mf.compare_2_vectors[self.size, dtype, SIMD.__eq__](self.data, other.data)
 
     @always_inline("nodebug")
     fn __eq__(self, other: SIMD[dtype, 1]) raises -> Vector3D[DType.bool]:
         """
         Itemwise equivelence between scalar and Array.
         """
-        return mf.compare_vector_and_scalar[dtype, SIMD.__eq__](self, other)
+        return mf.compare_vector_and_scalar[self.size, dtype, SIMD.__eq__](self.data, other)
 
     @always_inline("nodebug")
     fn __ne__(self, other: Vector3D[dtype]) raises -> Vector3D[DType.bool]:
         """
         Itemwise nonequivelence between scalar and Array.
         """
-        return mf.compare_2_vectors[dtype, SIMD.__ne__](self, other)
+        return mf.compare_2_vectors[self.size, dtype, SIMD.__ne__](self.data, other.data)
 
     @always_inline("nodebug")
     fn __ne__(self, other: SIMD[dtype, 1]) raises -> Vector3D[DType.bool]:
         """
         Itemwise nonequivelence.
         """
-        return mf.compare_vector_and_scalar[dtype, SIMD.__ne__](self, other)
+        return mf.compare_vector_and_scalar[self.size, dtype, SIMD.__ne__](self.data, other)
 
     @always_inline("nodebug")
     fn __lt__(self, other: Vector3D[dtype]) raises -> Vector3D[DType.bool]:
         """
         Itemwise less than between scalar and Array.
         """
-        return mf.compare_2_vectors[dtype, SIMD.__lt__](self, other)
+        return mf.compare_2_vectors[self.size, dtype, SIMD.__lt__](self.data, other.data)
     
     @always_inline("nodebug")
     fn __lt__(self, other: SIMD[dtype, 1]) raises -> Vector3D[DType.bool]:
         """
         Itemwise less than.
         """
-        return mf.compare_vector_and_scalar[dtype, SIMD.__lt__](self, other)
+        return mf.compare_vector_and_scalar[self.size, dtype, SIMD.__lt__](self.data, other)
 
     @always_inline("nodebug")
     fn __le__(self, other: Vector3D[dtype]) raises -> Vector3D[DType.bool]:
         """
         Itemwise less than or equal to between scalar and Array.
         """
-        return mf.compare_2_vectors[dtype, SIMD.__le__](self, other)
+        return mf.compare_2_vectors[self.size, dtype, SIMD.__le__](self.data, other.data)
 
     @always_inline("nodebug")
     fn __le__(self, other: SIMD[dtype, 1]) raises -> Vector3D[DType.bool]:
         """
         Itemwise less than or equal to.
         """
-        return mf.compare_vector_and_scalar[dtype, SIMD.__le__](self, other)
+        return mf.compare_vector_and_scalar[self.size, dtype, SIMD.__le__](self.data, other)
 
     @always_inline("nodebug")
     fn __gt__(self, other: Vector3D[dtype]) raises -> Vector3D[DType.bool]:
         """
         Itemwise greater than between scalar and Array.
         """
-        return mf.compare_2_vectors[dtype, SIMD.__gt__](self, other)
+        return mf.compare_2_vectors[self.size, dtype, SIMD.__gt__](self.data, other.data)
 
     @always_inline("nodebug")
     fn __gt__(self, other: SIMD[dtype, 1]) raises -> Vector3D[DType.bool]:
         """
         Itemwise greater than.
         """
-        return mf.compare_vector_and_scalar[dtype, SIMD.__gt__](self, other)
+        return mf.compare_vector_and_scalar[self.size, dtype, SIMD.__gt__](self.data, other)
 
     @always_inline("nodebug")
     fn __ge__(self, other: Vector3D[dtype]) raises -> Vector3D[DType.bool]:
         """
         Itemwise less than or equal to between scalar and Array.
         """
-        return mf.compare_2_vectors[dtype, SIMD.__ge__](self, other)
+        return mf.compare_2_vectors[self.size, dtype, SIMD.__ge__](self.data, other.data)
 
     @always_inline("nodebug")
     fn __ge__(self, other: SIMD[dtype, 1]) raises -> Vector3D[DType.bool]:
         """
         Itemwise greater than or equal to.
         """
-        return mf.compare_vector_and_scalar[dtype, SIMD.__ge__](self, other)
+        return mf.compare_vector_and_scalar[self.size, dtype, SIMD.__ge__](self.data, other)
 
     # 
-    """COMPARISIONS."""
+    """ARITHMETIC."""
     fn __add__(self, other:Scalar[dtype]) -> Self:
-        return mf.elementwise_scalar_arithmetic[dtype, SIMD.__add__](self, other)
+        return mf.elementwise_scalar_arithmetic[self.size, dtype, SIMD.__add__](self.data, other)
 
     fn __add__(self, other:Self) -> Self:
-        return mf.elementwise_array_arithmetic[dtype, SIMD.__add__](self, other)
+        return mf.elementwise_array_arithmetic[self.size, dtype, SIMD.__add__](self.data, other.data)
 
     fn __radd__(self, other: Scalar[dtype])->Self:
         return self + other
@@ -383,10 +383,10 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         self = self + other
     
     fn __sub__(self, other:Scalar[dtype]) -> Self:
-        return mf.elementwise_scalar_arithmetic[dtype, SIMD.__sub__](self, other)
+        return mf.elementwise_scalar_arithmetic[self.size, dtype, SIMD.__sub__](self.data, other)
 
     fn __sub__(self, other:Self) -> Self:
-        return mf.elementwise_array_arithmetic[dtype, SIMD.__sub__](self, other)
+        return mf.elementwise_array_arithmetic[self.size, dtype, SIMD.__sub__](self.data, other.data)
 
     fn __rsub__(self, other: Scalar[dtype])->Self:
         return -(self - other)
@@ -395,10 +395,10 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         self = self-other
 
     fn __mul__(self, other: Scalar[dtype])->Self:
-        return mf.elementwise_scalar_arithmetic[dtype, SIMD.__mul__](self, other)
+        return mf.elementwise_scalar_arithmetic[self.size, dtype, SIMD.__mul__](self.data, other)
 
     fn __mul__(self, other: Self)->Self:
-        return mf.elementwise_array_arithmetic[dtype, SIMD.__mul__](self, other)
+        return mf.elementwise_array_arithmetic[self.size, dtype, SIMD.__mul__](self.data, other.data)
 
     fn __rmul__(self, other: Scalar[dtype])->Self:
         return self*other
@@ -426,10 +426,10 @@ struct Vector3D[dtype: DType = DType.float64](Intable, CollectionElement, Sized,
         return new_vec
 
     fn __truediv__(inout self, other: Scalar[dtype]) -> Self:
-        return mf.elementwise_scalar_arithmetic[dtype, SIMD.__truediv__](self, other)
+        return mf.elementwise_scalar_arithmetic[self.size, dtype, SIMD.__truediv__](self.data, other)
 
     fn __truediv__(inout self, other:Self) -> Self:
-        return mf.elementwise_array_arithmetic[dtype, SIMD.__truediv__](self, other)
+        return mf.elementwise_array_arithmetic[self.size, dtype, SIMD.__truediv__](self.data, other.data)
 
     fn __itruediv__(inout self, s: Scalar[dtype]):
         self = self.__truediv__(s)
@@ -1005,91 +1005,92 @@ struct Vector2D[dtype: DType = DType.float64](
         """
         Itemwise equivelence.
         """
-        return mf.compare_2_vectors[dtype, SIMD.__eq__](self, other)
+        return mf.compare_2_vectors[self.size, dtype, SIMD.__eq__](self.data, other.data)
 
     @always_inline("nodebug")
     fn __eq__(self, other: SIMD[dtype, 1]) raises -> Vector3D[DType.bool]:
         """
         Itemwise equivelence between scalar and Array.
         """
-        return mf.compare_vector_and_scalar[dtype, SIMD.__eq__](self, other)
+        return mf.compare_vector_and_scalar[self.size, dtype, SIMD.__eq__](self.data, other)
 
     @always_inline("nodebug")
     fn __ne__(self, other: Vector3D[dtype]) raises -> Vector3D[DType.bool]:
         """
         Itemwise nonequivelence between scalar and Array.
         """
-        return mf.compare_2_vectors[dtype, SIMD.__ne__](self, other)
+        return mf.compare_2_vectors[self.size, dtype, SIMD.__ne__](self.data, other.data)
 
     @always_inline("nodebug")
     fn __ne__(self, other: SIMD[dtype, 1]) raises -> Vector3D[DType.bool]:
         """
         Itemwise nonequivelence.
         """
-        return mf.compare_vector_and_scalar[dtype, SIMD.__ne__](self, other)
+        return mf.compare_vector_and_scalar[self.size, dtype, SIMD.__ne__](self.data, other)
 
     @always_inline("nodebug")
     fn __lt__(self, other: Vector3D[dtype]) raises -> Vector3D[DType.bool]:
         """
         Itemwise less than between scalar and Array.
         """
-        return mf.compare_2_vectors[dtype, SIMD.__lt__](self, other)
+        return mf.compare_2_vectors[self.size, dtype, SIMD.__lt__](self.data, other.data)
     
     @always_inline("nodebug")
     fn __lt__(self, other: SIMD[dtype, 1]) raises -> Vector3D[DType.bool]:
         """
         Itemwise less than.
         """
-        return mf.compare_vector_and_scalar[dtype, SIMD.__lt__](self, other)
+        return mf.compare_vector_and_scalar[self.size, dtype, SIMD.__lt__](self.data, other)
 
     @always_inline("nodebug")
     fn __le__(self, other: Vector3D[dtype]) raises -> Vector3D[DType.bool]:
         """
         Itemwise less than or equal to between scalar and Array.
         """
-        return mf.compare_2_vectors[dtype, SIMD.__le__](self, other)
+        return mf.compare_2_vectors[self.size, dtype, SIMD.__le__](self.data, other.data)
 
     @always_inline("nodebug")
     fn __le__(self, other: SIMD[dtype, 1]) raises -> Vector3D[DType.bool]:
         """
         Itemwise less than or equal to.
         """
-        return mf.compare_vector_and_scalar[dtype, SIMD.__le__](self, other)
+        return mf.compare_vector_and_scalar[self.size, dtype, SIMD.__le__](self.data, other)
 
     @always_inline("nodebug")
     fn __gt__(self, other: Vector3D[dtype]) raises -> Vector3D[DType.bool]:
         """
         Itemwise greater than between scalar and Array.
         """
-        return mf.compare_2_vectors[dtype, SIMD.__gt__](self, other)
+        return mf.compare_2_vectors[self.size, dtype, SIMD.__gt__](self.data, other.data)
 
     @always_inline("nodebug")
     fn __gt__(self, other: SIMD[dtype, 1]) raises -> Vector3D[DType.bool]:
         """
         Itemwise greater than.
         """
-        return mf.compare_vector_and_scalar[dtype, SIMD.__gt__](self, other)
+        return mf.compare_vector_and_scalar[self.size, dtype, SIMD.__gt__](self.data, other)
 
     @always_inline("nodebug")
     fn __ge__(self, other: Vector3D[dtype]) raises -> Vector3D[DType.bool]:
         """
         Itemwise less than or equal to between scalar and Array.
         """
-        return mf.compare_2_vectors[dtype, SIMD.__ge__](self, other)
+        return mf.compare_2_vectors[self.size, dtype, SIMD.__ge__](self.data, other.data)
 
     @always_inline("nodebug")
     fn __ge__(self, other: SIMD[dtype, 1]) raises -> Vector3D[DType.bool]:
         """
         Itemwise greater than or equal to.
         """
-        return mf.compare_vector_and_scalar[dtype, SIMD.__ge__](self, other)
+        return mf.compare_vector_and_scalar[self.size, dtype, SIMD.__ge__](self.data, other)
 
-    """COMPARISIONS."""
+    # 
+    """ARITHMETIC."""
     fn __add__(self, other:Scalar[dtype]) -> Self:
-        return mf.elementwise_scalar_arithmetic[dtype, SIMD.__add__](self, other)
+        return mf.elementwise_scalar_arithmetic[self.size, dtype, SIMD.__add__](self.data, other)
 
     fn __add__(self, other:Self) -> Self:
-        return mf.elementwise_array_arithmetic[dtype, SIMD.__add__](self, other)
+        return mf.elementwise_array_arithmetic[self.size, dtype, SIMD.__add__](self.data, other.data)
 
     fn __radd__(self, other: Scalar[dtype])->Self:
         return self + other
@@ -1098,10 +1099,10 @@ struct Vector2D[dtype: DType = DType.float64](
         self = self + other
     
     fn __sub__(self, other:Scalar[dtype]) -> Self:
-        return mf.elementwise_scalar_arithmetic[dtype, SIMD.__sub__](self, other)
+        return mf.elementwise_scalar_arithmetic[self.size, dtype, SIMD.__sub__](self.data, other)
 
     fn __sub__(self, other:Self) -> Self:
-        return mf.elementwise_array_arithmetic[dtype, SIMD.__sub__](self, other)
+        return mf.elementwise_array_arithmetic[self.size, dtype, SIMD.__sub__](self.data, other.data)
 
     fn __rsub__(self, other: Scalar[dtype])->Self:
         return -(self - other)
@@ -1110,10 +1111,10 @@ struct Vector2D[dtype: DType = DType.float64](
         self = self-other
 
     fn __mul__(self, other: Scalar[dtype])->Self:
-        return mf.elementwise_scalar_arithmetic[dtype, SIMD.__mul__](self, other)
+        return mf.elementwise_scalar_arithmetic[self.size, dtype, SIMD.__mul__](self.data, other)
 
     fn __mul__(self, other: Self)->Self:
-        return mf.elementwise_array_arithmetic[dtype, SIMD.__mul__](self, other)
+        return mf.elementwise_array_arithmetic[self.size, dtype, SIMD.__mul__](self.data, other.data)
 
     fn __rmul__(self, other: Scalar[dtype])->Self:
         return self*other
@@ -1141,10 +1142,10 @@ struct Vector2D[dtype: DType = DType.float64](
         return new_vec
 
     fn __truediv__(inout self, other: Scalar[dtype]) -> Self:
-        return mf.elementwise_scalar_arithmetic[dtype, SIMD.__truediv__](self, other)
+        return mf.elementwise_scalar_arithmetic[self.size, dtype, SIMD.__truediv__](self.data, other)
 
     fn __truediv__(inout self, other:Self) -> Self:
-        return mf.elementwise_array_arithmetic[dtype, SIMD.__truediv__](self, other)
+        return mf.elementwise_array_arithmetic[self.size, dtype, SIMD.__truediv__](self.data, other.data)
 
     fn __itruediv__(inout self, s: Scalar[dtype]):
         self = self.__truediv__(s)
