@@ -1,7 +1,9 @@
-#Traits
+# Traits
+
 
 trait vectors:
     """Default constructor."""
+
     @always_inline("nodebug")
     fn __init__(inout self):
         """
@@ -17,10 +19,4 @@ trait vectors:
 
     fn print(self) raises -> None:
         """Prints the Vector3D."""
-        pass
-
-    fn typeof(inout self) -> DType:
-        pass
-
-    fn typeof_str(inout self) -> String:
         pass
