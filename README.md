@@ -1,47 +1,180 @@
-# HEPJo: High Energy Physics Computing in Mojo
+<a name="readme-top"></a>
+<!-- add these later -->
+<!-- [![MIT License][license-shield]][] -->
 
-<img src="extras/hepjo_img.jpeg" alt="logo" width="250"/>
+<div align="center">
+  <a href="">
+    <img src="./extras/hepjo_img.jpeg" alt="Logo" width="350" height="350">
+  </a>
 
-HEPJo is a library for numerical computations in Mojo, inspired by [Scikit-HEP](https://scikit-hep.org) library in Python. Our future goal is to incorporate as many features from Scikit-HEP as possible. Currently, HEPJo includes functions for numerical operations in particle physics, such as LorentzVector, Vector3D, Vector2D with plans to expand further.
+  <h1 align="center" style="font-size: 3em; color: white; font-family: 'Avenir'; text-shadow: 1px 1px orange;">HEPJo</h1>
 
-## Motivation and Goals
+  <p align="center">
+    HEPJo is a high-performance library for numerical computations in particle physics, written in Mojo 🔥 similar to Scikit-HEP in Python.
+    <br />
+    <br />
+  </p>
+</div>
 
-I've been keeping an eye on Mojo since its debut and have been eager to use it for scientific computations. However, since Mojo is still quite new, it lacks many of the features found in well-known scientific libraries in Python, such as [Numpy](https://numpy.org), [Scipy](https://scipy.org), and [ScikitHEP](https://scikit-hep.org). 
+<details>
+  <summary>Table of Contents</summary>
+  <ol>
+    <li>
+      <a href="#about">About</a>
+    </li>
+    <li>
+      <a href="#installation">Installation</a>
+    </li>
+    <li>
+      <a href="#features">Features</a>
+    </li>
+    <li>
+      <a href="#quick-start">Quick Start</a>
+    </li>
+    <li>
+      <a href="#api-reference">API Reference</a>
+    </li>
+  </ol>
+</details>
 
-* I mainly started this project to implement features specific to particle physics and as a general replacement for Scikit-HEP library. This project is also a great way for me to get hands-on experience with Mojo. I'm very open to contributions, so if you're interested or have any ideas or suggestions for features, please feel free to open a issue, PR.
+## About
 
-* At present, I've established most of the basic functionalities directly in Mojo, utilizing vectorization and parallelization to maximize performance wherever possible.
-
-* LorentzVector and Vector3D are implemented fully and maintains almost the same syntax as Python's Scikit-HEP library. If you have any ideas to implement or suggestions, please feel free to contact me. 
-
-## Features
-For a full list of features currently implemented, please check [Available features](Features.md) for a list of function and properties implemented. 
+HEPJo is a high-performance library for numerical computations in particle physics, written in Mojo. Inspired by [Scikit-HEP](https://scikit-hep.org), it aims to provide fast and efficient implementations of common particle physics operations. The library currently includes implementations of LorentzVector, Vector3D, and Vector2D classes with plans to expand further.
 
 ## Installation
 
-Clone the repository and build the mojo package (Currently not all functions are documented and therefore "mojo package" gives errors, I will resolve this soon. Please download and import it as module for now)
+1. Clone the repository.
+2. Build the package using `mojo package hepjo`
+3. Move the hepjo.mojopkg into the directory containing the your code.
 
-## Usage
+## Features
 
-Since HEPJo is very early in development, there's not much documentation. I will try to write a proper documentation soon. Please go through the code to understand all the available options. Following is a simple example, Please take a look at doc.mojo file for syntax and options available (Only Vector3D for now). You can also go through test.mojo to find syntax and options for now (It's messy and not organized right now).
+- **High Performance**: Written in Mojo for maximum speed and efficiency
+- **Vector Operations**: Complete implementation of 2D, 3D, and 4D (Lorentz) vectors
+- **Physics Operations**: Common particle physics calculations including boosts and transformations
+- **Type Safety**: Strong typing and compile-time checks
+- **Scikit-HEP like Interface**: Familiar API for physics computations
 
-```
+## Quick Start
+
+HEPJo is currently under development and does not yet have comprehensive documentation. Please refer to the tests and example code to explore the full range of functionalities available.
+
+```mojo
 import hepjo as hj
 from hepjo import Vector3D, LorentzVector
 
-var vec = hj.Vector3D(1.0,2.0,3.0)
-var vec1 = hj.Vector3D(1.0,2.0,3.0)
-print(dot(vec, vec1))
+# Create and manipulate 3D vectors
+var vec = hj.Vector3D(1.0, 2.0, 3.0)
+var vec1 = hj.Vector3D(1.0, 2.0, 3.0)
+print(vec.dot(vec1), vec @ vec1)  # Both computes dot product
 
-var lvec = LorentzVector(1.0, 2.0, 3.0, 10.0) # px, py, pz, e
-var restframe_lvec = lvec.torestframe() #returns to rest frame four vector
+# Work with Lorentz vectors
+var lvec = LorentzVector(1.0, 2.0, 3.0, 10.0)  # px, py, pz, e
+var restframe_lvec = lvec.torestframe()  # Transform to rest frame
 
+# Create Lorentz vector with given mass
 var lvec1 = LorentzVector.setpxpypzm(3.0, 4.0, 5.0, 10.0)
-var boosted_lvec = lvec.boost(lvec1.boostvector()) # Boosts the Lorentz vector lvec using lvec1
+var boosted_lvec = lvec.boost(lvec1.boostvector())  # Apply boost transformation
 ```
 
-## Contributions
-Anyone interested in contributing or have interesting ideas, your suggestions are always welcomed. please feel free to contact me or open an issue. 
+## API Reference
 
-## Updates
-Initially, I started developing a general purpose replacement for numpy, scipy, and Scikit-HEP in Mojo. However, I recently discovered another team working on a numpy replacement called [NuMojo](https://github.com/Mojo-Numerics-and-Algorithms-group/NuMojo). I have joined their group and will contribute to that project to build a general purpose replacement for numpy, scipy (You can find my current fork [here](https://github.com/shivasankarka/NuMojo)). I will continue working on this project as well, but I intend to focus on creating a specialized Scikit-HEP replacement tailored specifically for high-energy physics. 
+### Vector2D
+
+The `Vector2D[dtype]` class represents a two-dimensional vector.
+
+#### Methods
+
+- `__init__(x: Scalar[dtype], y: Scalar[dtype])`: Initialize a 3D vector
+- `dot(other: Vector2D) -> Float64`: Compute dot product
+- `cross(other: Vector2D) -> Vector3D`: Compute cross product
+- `mag() -> Scalar[dtype]`: Get vector magnitude
+- `mag2() -> Scalar[dtype]`: Get squared magnitude
+- `unit() -> Vector2D`: Get unit vector
+
+### Vector3D
+
+The `Vector3D[dtype]` class represents a three-dimensional vector with operations commonly used in particle physics.
+
+#### Methods
+
+- `__init__(x: Scalar[dtype], y: Scalar[dtype], z: Scalar[dtype])`: Initialize a 3D vector
+- `dot(other: Vector3D) -> Float64`: Compute dot product
+- `cross(other: Vector3D) -> Vector3D`: Compute cross product
+- `mag() -> Scalar[dtype]`: Get vector magnitude
+- `mag2() -> Scalar[dtype]`: Get squared magnitude
+- `unit() -> Vector3D`: Get unit vector
+
+### LorentzVector
+
+The `LorentzVector[dtype]` class represents a four-momentum vector with operations for relativistic calculations.
+
+#### Methods
+
+- `__init__(px: Scalar[dtype], py: Scalar[dtype], pz: Scalar[dtype], e: Scalar[dtype])`: Initialize with momentum components and energy
+- `setpxpypzm(px: Scalar[dtype], py: Scalar[dtype], pz: Scalar[dtype], m: Scalar[dtype]) -> LorentzVector`: Create from momentum and mass
+- `torestframe() -> LorentzVector`: Transform to rest frame
+- `boost(beta: Vector3D) -> LorentzVector`: Apply Lorentz boost
+- `mass() -> Scalar[dtype]`: Get invariant mass
+- `mass2() -> Scalar[dtype]`: Get squared invariant mass
+- `pt() -> Scalar[dtype]`: Get transverse momentum
+- `eta() -> Scalar[dtype]`: Get pseudorapidity
+- `phi() -> Scalar[dtype]`: Get azimuthal angle
+- `boostvector() -> Vector3D`: Get boost vector
+
+## Examples
+
+### Computing Invariant Mass
+
+```python
+from hepjo import LorentzVector
+
+# Create two particles
+var particle1 = LorentzVector.setpxpypzm(10.0, 20.0, 30.0, 0.139)  # pion
+var particle2 = LorentzVector.setpxpypzm(-5.0, 15.0, 25.0, 0.139)  # pion
+
+# Compute invariant mass of the system
+var system = particle1 + particle2
+print(system.mass())  # Print invariant mass
+```
+
+### Boost to Center of Mass Frame
+
+```mojo
+from hepjo import LorentzVector
+
+# Create a particle system
+var particle = LorentzVector(5.0, 0.0, 0.0, 10.0) # px, py, pz, e
+var lab_frame = LorentzVector(0.0, 0.0, 8.0, 12.0) 
+
+# Boost to center of mass frame
+var cm_frame = particle.boost(lab_frame.boostvector())
+print(cm_frame.p())  # Print momentum in CM frame
+```
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+Distributed under the Apache 2.0 License with LLVM Exceptions. See [LICENSE](https://github.com/shivasankarka/HEPJo/blob/main/LICENSE) and the LLVM [License](https://llvm.org/LICENSE.txt) for more information.
+
+## Future Plans
+- Integration with PDG particle data.
+- Implement a System of Units similar to GEANT4.
+- Integration with common HEP analysis frameworks.
+- GPU support for large array computations.
+- Add more Mojo backends such as [NuMojo](https://github.com/Mojo-Numerics-and-Algorithms-group/NuMojo).
+
+## Citation
+If you use HEPJo in your research, please cite:
+
+```bibtex
+@software{hepjo,
+  author = {ShivaSankar K.A},
+  title = {HEPJo: High Performance Particle Physics in Mojo},
+  year = {2024},
+  url = {https://github.com/shivasankarka/hepjo}
+}
+```
