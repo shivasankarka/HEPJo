@@ -1,27 +1,27 @@
 from algorithm.functional import vectorize
-from .traits import vectors
-
-"""
-TODO:
-1) Rewrite the docstrings correctly. 
-"""
+from memory import UnsafePointer
+from sys import simdwidthof
 
 
 fn bool_simd_store[
-    width: Int
-](ptr: DTypePointer[DType.bool], start: Int, val: SIMD[DType.bool, width]):
+    simd_width: Int
+](
+    ptr: UnsafePointer[Scalar[DType.bool]],
+    start: Int,
+    val: SIMD[DType.bool, simd_width],
+):
     """
     Work around function for storing bools from a simd into a DTypePointer.
 
     Parameters:
-        width: Number of items to be retrieved.
+        simd_width: Number of items to be retrieved.
 
     Args:
         ptr: Pointer to be retreived from.
         start: Start position in pointer.
         val: Value to store at locations.
     """
-    (ptr + start).simd_strided_store[width=width, T=Int](val, 1)
+    (ptr + start).strided_store(val, 1)
 
 
 # VECTORIZED MATH OPERATIONS ON VECTOR3D
@@ -32,9 +32,9 @@ fn compare_2_vectors[
         SIMD[type, simd_w], SIMD[type, simd_w]
     ) -> SIMD[DType.bool, simd_w],
 ](
-    array1: DTypePointer[dtype],
-    array2: DTypePointer[dtype],
-    result: DTypePointer[DType.bool],
+    array1: UnsafePointer[Scalar[dtype]],
+    array2: UnsafePointer[Scalar[dtype]],
+    result: UnsafePointer[Scalar[DType.bool]],
 ) raises:
     alias opt_nelts = simdwidthof[dtype]()
 
@@ -58,16 +58,16 @@ fn compare_vector_and_scalar[
         SIMD[type, simd_w], SIMD[type, simd_w]
     ) -> SIMD[DType.bool, simd_w],
 ](
-    array1: DTypePointer[dtype],
+    array1: UnsafePointer[Scalar[dtype]],
     scalar: SIMD[dtype, 1],
-    result: DTypePointer[DType.bool],
+    result: UnsafePointer[Scalar[DType.bool]],
 ) raises:
     alias opt_nelts = simdwidthof[dtype]()
 
     @parameter
     fn closure[simdwidth: Int](i: Int):
         var simd_data1 = array1.load[width=simdwidth](i)
-        var simd_data2 = SIMD[dtype, simdwidth].splat(scalar)
+        var simd_data2 = SIMD[dtype, simdwidth](scalar)
         bool_simd_store[simdwidth](
             result,
             i,
@@ -84,9 +84,9 @@ fn elementwise_scalar_arithmetic[
         SIMD[dtype, width], SIMD[dtype, width]
     ) -> SIMD[dtype, width],
 ](
-    vector: DTypePointer[dtype],
+    vector: UnsafePointer[Scalar[dtype]],
     scalar: Scalar[dtype],
-    result: DTypePointer[dtype],
+    result: UnsafePointer[Scalar[dtype]],
 ):
     """
     Performs an element-wise scalar arithmetic operation on this vector using SIMD,
@@ -112,10 +112,8 @@ fn elementwise_scalar_arithmetic[
     @parameter
     fn elemwise_vectorize[simd_width: Int](idx: Int) -> None:
         var simd_data1 = vector.load[width=simd_width](idx)
-        var simd_data2 = SIMD[dtype, simd_width].splat(scalar)
-        result.store[width=simd_width](
-            idx, function[dtype, simd_width](simd_data1, simd_data2)
-        )
+        var simd_data2 = SIMD[dtype, simd_width](scalar)
+        result.store(idx, function[dtype, simd_width](simd_data1, simd_data2))
 
     vectorize[elemwise_vectorize, opt_nelts](size)
 
@@ -127,9 +125,9 @@ fn elementwise_array_arithmetic[
         SIMD[dtype, width], SIMD[dtype, width]
     ) -> SIMD[dtype, width],
 ](
-    vector1: DTypePointer[dtype],
-    vector2: DTypePointer[dtype],
-    result: DTypePointer[dtype],
+    vector1: UnsafePointer[Scalar[dtype]],
+    vector2: UnsafePointer[Scalar[dtype]],
+    result: UnsafePointer[Scalar[dtype]],
 ):
     """
     Performs an element-wise arithmetic operation between two vectors using SIMD (Single Instruction, Multiple Data) techniques.
@@ -148,15 +146,54 @@ fn elementwise_array_arithmetic[
 
     """
     alias opt_nelts: Int = simdwidthof[dtype]()
-    # var new_array = DTypePointer[dtype]()
+    # var new_array = UnsafePointer[Scalar[dtype]]()
 
     @parameter
     fn elemwise_vectorize[simd_width: Int](idx: Int) -> None:
         var simd_data1 = vector1.load[width=simd_width](idx)
         var simd_data2 = vector2.load[width=simd_width](idx)
-        result.store[width=simd_width](
-            idx, function[dtype, simd_width](simd_data1, simd_data2)
-        )
+        result.store(idx, function[dtype, simd_width](simd_data1, simd_data2))
+
+    vectorize[elemwise_vectorize, opt_nelts](size)
+
+
+fn elementwise_array_arithmetic[
+    size: Int,
+    dtype: DType,
+    function: fn[dtype: DType, width: Int] (
+        SIMD[dtype, width], SIMD[dtype, width]
+    ) -> SIMD[dtype, width],
+](
+    vector1: UnsafePointer[Scalar[dtype]],
+    vector2: UnsafePointer[Scalar[dtype]],
+    mut result: Scalar[dtype],
+):
+    """
+    Performs an element-wise arithmetic operation between two vectors using SIMD (Single Instruction, Multiple Data) techniques.
+
+    This function leverages a provided SIMD-compatible function `func` to perform the specified arithmetic operation on corresponding elements of this vector and another vector `other`.
+
+    Parameters:
+        size: The size of the vector.
+        dtype: Datatype of the elements.
+        function: A function that specifies the arithmetic operation to be performed. It takes two SIMD arguments and returns a SIMD result.
+
+    Args:
+        vector1: The first vector.
+        vector2: The second vector.
+        result: The vector to store the result of the operation.
+
+    """
+    alias opt_nelts: Int = simdwidthof[dtype]()
+    # var new_array = UnsafePointer[Scalar[dtype]]()
+
+    @parameter
+    fn elemwise_vectorize[simd_width: Int](idx: Int) -> None:
+        var simd_data1 = vector1.load[width=simd_width](idx)
+        var simd_data2 = vector2.load[width=simd_width](idx)
+        result += function[dtype, simd_width](
+            simd_data1, simd_data2
+        ).reduce_add()
 
     vectorize[elemwise_vectorize, opt_nelts](size)
 
@@ -167,7 +204,7 @@ fn elementwise_function_arithmetic[
     func: fn[dtype: DType, width: Int] (SIMD[dtype, width]) -> SIMD[
         dtype, width
     ],
-](inout vector: DTypePointer[dtype]):
+](inout vector: UnsafePointer[Scalar[dtype]]):
     """
     Applies a SIMD-compatible function element-wise to this vector.
 
@@ -183,7 +220,7 @@ fn elementwise_function_arithmetic[
 
     @parameter
     fn elemwise_vectorize[simd_width: Int](idx: Int) -> None:
-        vector.store[width=simd_width](
+        vector.store(
             idx, func[dtype, simd_width](vector.load[width=simd_width](idx))
         )
 
