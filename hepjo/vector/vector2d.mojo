@@ -18,9 +18,10 @@ from ..constants import pi
 ####################################### VECTOR 2D ##############################################################
 ################################################################################################################
 
+
 @value
 struct Vector2D[dtype: DType = DType.float64](
-  Stringable, Representable, CollectionElement, Sized, Writable  
+    Stringable, Representable, CollectionElement, Sized, Writable
 ):
     # Fields
     var _buf: UnsafePointer[Scalar[dtype]]
@@ -29,6 +30,7 @@ struct Vector2D[dtype: DType = DType.float64](
     """The size of the Vector."""
 
     """ LIFETIME METHODS """
+
     fn __init__(mut self):
         """
         Initializes a 2D vector with zero elements.
@@ -154,7 +156,7 @@ struct Vector2D[dtype: DType = DType.float64](
 
     fn __len__(self) -> Int:
         """Returns the length of the Vector2D (=2)."""
-        return self.size 
+        return self.size
 
     fn __iter__(self) raises -> _vector2DIter[__origin_of(self), dtype]:
         """Iterate over elements of the Vector2D, returning copied value.
@@ -512,7 +514,7 @@ struct Vector2D[dtype: DType = DType.float64](
     fn fromlist(iterable: List[Scalar[dtype]]) raises -> Self:
         if len(iterable) == 2:
             return Self(iterable[0], iterable[1])
-        else:  
+        else:
             raise Error("Error: Length of iterable must be 2")
 
     # * PROPERTIES
@@ -684,7 +686,9 @@ struct Vector2D[dtype: DType = DType.float64](
         Returns:
             The scalar dot product of the two vectors.
         """
-        return (self._buf.load[width=2](0) * other._buf.load[width=2](0)).reduce_add()
+        return (
+            self._buf.load[width=2](0) * other._buf.load[width=2](0)
+        ).reduce_add()
 
     fn cross(self, other: Self) -> Scalar[dtype]:
         """
@@ -724,12 +728,8 @@ struct Vector2D[dtype: DType = DType.float64](
         Args:
             angle: The angle in radians by which to rotate the vector around the Z-axis.
         """
-        var x_new = self._buf[0] * cos(angle) - self._buf[1] * sin(
-            angle
-        )
-        var y_new = self._buf[0] * sin(angle) + self._buf[1] * cos(
-            angle
-        )
+        var x_new = self._buf[0] * cos(angle) - self._buf[1] * sin(angle)
+        var y_new = self._buf[0] * sin(angle) + self._buf[1] * cos(angle)
         self.set(x_new, y_new)
 
     fn cos_angle(self, other: Self) -> Scalar[dtype]:
@@ -768,7 +768,7 @@ struct Vector2D[dtype: DType = DType.float64](
         """
         return self.cos_angle(other) == 1.0
 
-    fn isantiparallel(self,  other: Self) -> Bool:
+    fn isantiparallel(self, other: Self) -> Bool:
         """
         Determines if this vector is antiparallel to another vector.
 
@@ -797,7 +797,9 @@ struct Vector2D[dtype: DType = DType.float64](
         for i in range(self.size):
             self._buf[i] = function(self._buf[i])[0]
 
+
 #####################################################################################
+
 
 @value
 struct _vector2DIter[

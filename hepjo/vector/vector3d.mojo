@@ -18,6 +18,7 @@ from ..constants import pi
 ####################################### VECTOR 3D ##############################################################
 ################################################################################################################
 
+
 # maybe _buf being a SIMD[dtype, 4] is better
 struct Vector3D[dtype: DType = DType.float64](
     Stringable, Representable, CollectionElement, Sized, Writable
@@ -29,6 +30,7 @@ struct Vector3D[dtype: DType = DType.float64](
     """The size of the Vector."""
 
     """ LIFETIME METHODS """
+
     @always_inline("nodebug")
     fn __init__(mut self):
         """

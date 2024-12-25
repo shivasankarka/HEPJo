@@ -712,12 +712,16 @@ struct LorentzVector[dtype: DType = DType.float64](
 
     fn mag(self) -> Scalar[dtype]:
         return sqrt(
-            self._buf[3]**2 - (self._buf.load[width=2](0) ** 2).reduce_add() - self._buf.load(2)**2
+            self._buf[3] ** 2
+            - (self._buf.load[width=2](0) ** 2).reduce_add()
+            - self._buf.load(2) ** 2
         )
 
     fn mag2(self) -> Scalar[dtype]:
         return sqrt(
-            self._buf[3]**2 - (self._buf.load[width=2](0) ** 2).reduce_add() - self._buf.load(2)**2
+            self._buf[3] ** 2
+            - (self._buf.load[width=2](0) ** 2).reduce_add()
+            - self._buf.load(2) ** 2
         )
 
     fn costheta(mut self) -> Scalar[dtype]:
