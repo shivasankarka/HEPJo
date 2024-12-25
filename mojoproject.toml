@@ -1,12 +1,13 @@
 [project]
 authors = ["shivasankar <shivasankar.ka@gmail.com>"]
 channels = ["conda-forge", "https://conda.modular.com/max"]
-description = "Add a short description here"
-name = "hepkit🔥"
+description = "HEPJo is a high-performance library for numerical computations in particle physics, written in Mojo 🔥 similar to Scikit-HEP in Python."
+name = "HEPJo"
 platforms = ["osx-arm64"]
 version = "0.1.0"
 
 [tasks]
+final = "magic run mojo test test -I ./ && magic run mojo format ./ && magic run mojo package hepjo"
 
 [dependencies]
 max = ">=24.6.0,<25"
