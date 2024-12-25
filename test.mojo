@@ -1,10 +1,6 @@
-import math as mt
-import time
-from algorithm import parallelize
-from benchmark.compiler import keep
 
-import hepjo as hj
-from random import random_float64
+from hepjo import *
+
 
 # fn main() raises:
 #     # * Vector3D
@@ -50,7 +46,25 @@ from random import random_float64
 import os
 
 fn main() raises:
-    var t0 = time.now()
+    var hydrogen = Element(name="hydrogen", symbol="H", Z=1, atomic_mass=1.0)
+    var oxygen = Element(name="oxygen", symbol="O", Z=1, atomic_mass=1.0)
+    var mix: List[Element] = List[Element](hydrogen, oxygen)
+    var water = Compound(name="water", weight=10.0, density=1.0, components=mix)
+    print(water)    
+    print(hydrogen)
+    print(oxygen)
+    var box1 = box(xlen=1.0, ylen=1.0, zlen=1.0, material=water, pos=Vector3D(0.0, 0.0, 0.0))
+    var sphere1 = sphere(pos=Vector3D(0.0, 0.0, 0.0), radius=1.0, material=water)
+    print(box1)
+    print(sphere1)
+
+    # var test1 = hj.Vector3D[hj.i32](1,2,3)
+    # var test2 = hj.Vector3D[hj.i32](4,5,6)
+    # var result = test1 + test2
+
+    # var result = hj.LorentzVector[hj.f64](1.0, 2.0, 3.0, 4.0)
+    # print(result)
+    # var t0 = time.now()
     # alias file_name = "/Users/shivasankar/Documents/Research/Codes/FASER/Models/DiracRHN/model/events/lnuq/100MeV/events_lnle_10000.csv"
     # var file = open(file_name, "r")  
 
@@ -75,24 +89,24 @@ fn main() raises:
     #     i += 1
     # file.close()
 
-    @parameter
-    fn calc(idx: Int) -> None:
-        var r0 = SIMD[DType.float64, 4](-0.77701472595259997, -0.12122280619049999 , 6.00117508534040011, 0.0)
-        # var v0 = SIMD[DType.float64, 4](random_float64(1e-5, 1e-4) * 3e8 * (1.0 / 0.511e-3), random_float64(1e-5, 1e-4) * 3e8 * (1.0 / 0.511e-3), 0.99999999 * 3e8 * (1.0 / 0.511e-3), 0.0)
-        var v0 = SIMD[DType.float64, 4](( -1.0202484708999999/788.1528091852) * 3e8 * (1.0 / 0.511e-3), (0.17683364600000001/788.1528091852) * 3e8 * (1.0 / 0.511e-3), (788.15212900120002/788.1528091852) * 3e8 * (1.0 / 0.511e-3), 0.0)
+    # @parameter
+    # fn calc(idx: Int) -> None:
+    #     var r0 = SIMD[DType.float64, 4](-0.77701472595259997, -0.12122280619049999 , 6.00117508534040011, 0.0)
+    #     # var v0 = SIMD[DType.float64, 4](random_float64(1e-5, 1e-4) * 3e8 * (1.0 / 0.511e-3), random_float64(1e-5, 1e-4) * 3e8 * (1.0 / 0.511e-3), 0.99999999 * 3e8 * (1.0 / 0.511e-3), 0.0)
+    #     var v0 = SIMD[DType.float64, 4](( -1.0202484708999999/788.1528091852) * 3e8 * (1.0 / 0.511e-3), (0.17683364600000001/788.1528091852) * 3e8 * (1.0 / 0.511e-3), (788.15212900120002/788.1528091852) * 3e8 * (1.0 / 0.511e-3), 0.0)
          
-        var a0 = SIMD[DType.float64, 4](0.0, 0.0, 0.0, 0.0)
-        var ratio: Float64 = -175824175824.17584
-        var B = SIMD[DType.float64, 4](0, 1.0, 0, 0.0)
-        print("Initial position: ", r0.__str__())
-        print("Initial velocity: ", v0.__str__())
-        print("Initial energy: ", v0[0]**2 + v0[1]**2 + v0[2]**2)
+    #     var a0 = SIMD[DType.float64, 4](0.0, 0.0, 0.0, 0.0)
+    #     var ratio: Float64 = -175824175824.17584
+    #     var B = SIMD[DType.float64, 4](0, 1.0, 0, 0.0)
+    #     print("Initial position: ", r0.__str__())
+    #     print("Initial velocity: ", v0.__str__())
+    #     print("Initial energy: ", v0[0]**2 + v0[1]**2 + v0[2]**2)
 
-        hj.simulate_particles(r = r0, v = v0, a = a0, B = B, zf = 10.0, num_steps = 10**6, dt = 1e-13, ratio = ratio)
+    #     hj.simulate_particles(r = r0, v = v0, a = a0, B = B, zf = 10.0, num_steps = 10**6, dt = 1e-13, ratio = ratio)
 
-        print("Final position: ", r0[0], r0[1], r0[2])
-        print("Final velocity: ", v0[0], v0[1], v0[2])
-        print("Final energy: ", v0[0]**2 + v0[1]**2 + v0[2]**2)
+    #     print("Final position: ", r0[0], r0[1], r0[2])
+    #     print("Final velocity: ", v0[0], v0[1], v0[2])
+    #     print("Final energy: ", v0[0]**2 + v0[1]**2 + v0[2]**2)
 
-    parallelize[calc](100, 100)
-    print("time taken: ", (time.now() - t0) / 1e9)
+    # parallelize[calc](100, 100)
+    # print("time taken: ", (time.now() - t0) / 1e9)

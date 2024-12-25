@@ -5,9 +5,9 @@ from algorithm import vectorize
 from builtin.type_aliases import AnyLifetime
 
 from tensor import Tensor
-from .constants import pi
+from ..physics.constants import pi
 import . math_funcs as mf
-from .traits import vectors
+from ..traits import vectors
 
 """
 TODO:
@@ -51,7 +51,7 @@ struct _vector3DIter[
     fn __iter__(self) -> Self:
         return self
 
-    fn __next__(inout self) raises -> Scalar[dtype]:
+    fn __next__(inout self) raises -> SIMD[dtype, 1]:
         @parameter
         if forward:
             var current_index = self.index
@@ -71,6 +71,7 @@ struct _vector3DIter[
 
 
 @value
+@register_passable("trivial")
 struct Vector3D[dtype: DType = DType.float64](
     Intable, CollectionElement, Sized, Stringable, vectors
 ):
@@ -102,7 +103,7 @@ struct Vector3D[dtype: DType = DType.float64](
     #         self.data[i] = data
 
     @always_inline("nodebug")
-    fn __init__(inout self, *data: Scalar[dtype]) raises:
+    fn __init__(inout self, *data: SIMD[dtype, 1]) raises:
         """
         Initializes a 3D vector with the given elements.
         """
@@ -113,7 +114,7 @@ struct Vector3D[dtype: DType = DType.float64](
             self.data[i] = data[i]
 
     @always_inline("nodebug")
-    fn __init__(inout self, data: List[Scalar[dtype]]) raises:
+    fn __init__(inout self, data: List[SIMD[dtype, 1]]) raises:
         """
         Initializes a 3D vector with the given List of elements.
         """
@@ -124,7 +125,7 @@ struct Vector3D[dtype: DType = DType.float64](
             self.data[i] = data[i]
 
     fn __init__(
-        inout self, x: Scalar[dtype], y: Scalar[dtype], z: Scalar[dtype]
+        inout self, x: SIMD[dtype, 1], y: SIMD[dtype, 1], z: SIMD[dtype, 1]
     ):
         """
         Initializes a 3D vector with the given elements.
@@ -141,7 +142,7 @@ struct Vector3D[dtype: DType = DType.float64](
         self.data = data
 
     # TODO: I have used a print block and return 0 for invalid index, there's clash between Stringable and raises if I add a raise Error.
-    fn __getitem__(self, index: Int) raises -> Scalar[dtype]:
+    fn __getitem__(self, index: Int) raises -> SIMD[dtype, 1]:
         if index >= 3:
             raise Error("Invalid index: index exceeds size")
         elif index < 0:
@@ -149,7 +150,7 @@ struct Vector3D[dtype: DType = DType.float64](
         else:
             return self.data.load[width=1](index)
 
-    fn __setitem__(inout self, index: Int, value: Scalar[dtype]):
+    fn __setitem__(inout self, index: Int, value: SIMD[dtype, 1]):
         self.data.store[width=1](index, value)
 
     fn __len__(self) -> Int:
@@ -393,27 +394,27 @@ struct Vector3D[dtype: DType = DType.float64](
     #
     """ARITHMETIC."""
 
-    fn __add__(self, other: Scalar[dtype]) -> Self:
+    fn __add__(inout self, other: SIMD[dtype, 1]) -> Self:
         var result: Self = Self()
         mf.elementwise_scalar_arithmetic[self.size, dtype, SIMD.__add__](
             self.data, other, result.data
         )
         return result
 
-    fn __add__(self, other: Self) -> Self:
+    fn __add__(inout self, other: Self) -> Self:
         var result: Self = Self()
         mf.elementwise_array_arithmetic[self.size, dtype, SIMD.__add__](
             self.data, other.data, result.data
         )
         return result
 
-    fn __radd__(self, other: Scalar[dtype]) -> Self:
+    fn __radd__(inout self, other: SIMD[dtype, 1]) -> Self:
         return self + other
 
-    fn __iadd__(inout self, other: Scalar[dtype]):
+    fn __iadd__(inout self, other: SIMD[dtype, 1]):
         self = self + other
 
-    fn __sub__(self, other: Scalar[dtype]) -> Self:
+    fn __sub__(self, other: SIMD[dtype, 1]) -> Self:
         var result: Self = Self()
         mf.elementwise_scalar_arithmetic[self.size, dtype, SIMD.__sub__](
             self.data, other, result.data
@@ -430,13 +431,13 @@ struct Vector3D[dtype: DType = DType.float64](
         )
         return result
 
-    fn __rsub__(self, other: Scalar[dtype]) -> Self:
+    fn __rsub__(inout self, other: SIMD[dtype, 1]) -> Self:
         return -(self - other)
 
-    fn __isub__(inout self, other: Scalar[dtype]):
+    fn __isub__(inout self, other: SIMD[dtype, 1]):
         self = self - other
 
-    fn __mul__(self, other: Scalar[dtype]) -> Self:
+    fn __mul__(self, other: SIMD[dtype, 1]) -> Self:
         var result: Self = Self()
         mf.elementwise_scalar_arithmetic[self.size, dtype, SIMD.__mul__](
             self.data, other, result.data
@@ -453,14 +454,14 @@ struct Vector3D[dtype: DType = DType.float64](
         )
         return result
 
-    fn __rmul__(self, other: Scalar[dtype]) -> Self:
+    fn __rmul__(self, other: SIMD[dtype, 1]) -> Self:
         return self * other
 
-    fn __imul__(inout self, other: Scalar[dtype]):
+    fn __imul__(inout self, other: SIMD[dtype, 1]):
         self = self * other
 
     # * since "*" already does element wise calculation, I think matmul is redundant for 1D array, but I could use it for dot products
-    # fn __matmul__(inout self, other:Self) -> Scalar[dtype]:
+    # fn __matmul__(inout self, other:Self) -> SIMD[dtype, 1]:
     #     return self._elementwise_array_arithmetic[SIMD.__mul__](other)._reduce_sum()
 
     fn __pow__(self, p: Int) -> Self:
@@ -482,7 +483,7 @@ struct Vector3D[dtype: DType = DType.float64](
         vectorize[tensor_scalar_vectorize, simd_width](self.size)
         return new_vec
 
-    fn __truediv__(inout self, other: Scalar[dtype]) -> Self:
+    fn __truediv__(inout self, other: SIMD[dtype, 1]) -> Self:
         var result: Self = Self()
         mf.elementwise_scalar_arithmetic[self.size, dtype, SIMD.__truediv__](
             self.data, other, result.data
@@ -499,22 +500,35 @@ struct Vector3D[dtype: DType = DType.float64](
         )
         return result
 
-    fn __itruediv__(inout self, s: Scalar[dtype]):
+    fn __itruediv__(inout self, s: SIMD[dtype, 1]):
         self = self.__truediv__(s)
 
     fn __itruediv__(inout self, other: Self):
         self = self.__truediv__(other)
 
-    fn __rtruediv__(inout self, s: Scalar[dtype]) -> Self:
+    fn __rtruediv__(inout self, s: SIMD[dtype, 1]) -> Self:
         return self.__truediv__(s)
 
+    fn distance(inout self, other: Vector3D[dtype]) -> SIMD[dtype, 1]:
+        """
+        Calculates the Euclidean distance between two vectors.
+
+        Args:
+            other: The other vector.
+
+        Returns:
+            The Euclidean distance between the two vectors.
+        """
+        var result = (self - other).mag()
+        return result
+        
     # * STATIC METHODS
     @staticmethod
     fn origin() -> Self:
         return Self(0.0, 0.0, 0.0)
 
     @staticmethod
-    fn frompoint(x: Scalar[dtype], y: Scalar[dtype], z: Scalar[dtype]) -> Self:
+    fn frompoint(x: SIMD[dtype, 1], y: SIMD[dtype, 1], z: SIMD[dtype, 1]) -> Self:
         return Self(x=x, y=y, z=z)
 
     @staticmethod
@@ -523,23 +537,23 @@ struct Vector3D[dtype: DType = DType.float64](
 
     @staticmethod
     fn fromsphericalcoords(
-        r: Scalar[dtype], theta: Scalar[dtype], phi: Scalar[dtype]
+        r: SIMD[dtype, 1], theta: SIMD[dtype, 1], phi: SIMD[dtype, 1]
     ) -> Self:
-        var x: Scalar[dtype] = r * math.sin(theta) * math.cos(phi)
-        var y: Scalar[dtype] = r * math.sin(theta) * math.sin(phi)
-        var z: Scalar[dtype] = r * math.cos(theta)
+        var x: SIMD[dtype, 1] = r * math.sin(theta) * math.cos(phi)
+        var y: SIMD[dtype, 1] = r * math.sin(theta) * math.sin(phi)
+        var z: SIMD[dtype, 1] = r * math.cos(theta)
         return Vector3D(x, y, z)
 
     @staticmethod
     fn fromcylindricalcoodinates(
-        rho: Scalar[dtype], phi: Scalar[dtype], z: Scalar[dtype]
+        rho: SIMD[dtype, 1], phi: SIMD[dtype, 1], z: SIMD[dtype, 1]
     ) -> Self:
-        var x: Scalar[dtype] = rho * math.cos(phi)
-        var y: Scalar[dtype] = rho * math.sin(phi)
+        var x: SIMD[dtype, 1] = rho * math.cos(phi)
+        var y: SIMD[dtype, 1] = rho * math.sin(phi)
         return Vector3D(x, y, z)
 
     @staticmethod
-    fn fromlist(inout iterable: List[Scalar[dtype]]) raises -> Self:
+    fn fromlist(inout iterable: List[SIMD[dtype, 1]]) raises -> Self:
         if len(iterable) == 3:
             return Self(iterable[0], iterable[1], iterable[2])
         else:
@@ -547,7 +561,7 @@ struct Vector3D[dtype: DType = DType.float64](
 
     # * PROPERTIES
     # TODO : Implement @property decorator for x,y,z once available in Mojo
-    fn x(inout self, x: Scalar[dtype]):
+    fn x(inout self, x: SIMD[dtype, 1]):
         """
         Sets the x-component of the vector.
 
@@ -556,7 +570,7 @@ struct Vector3D[dtype: DType = DType.float64](
         """
         self.data[0] = x
 
-    fn x(inout self) -> Scalar[dtype]:
+    fn x(self) -> SIMD[dtype, 1]:
         """
         Returns the x-component of the vector.
 
@@ -565,7 +579,7 @@ struct Vector3D[dtype: DType = DType.float64](
         """
         return self.data[0]
 
-    fn y(inout self, y: Scalar[dtype]):
+    fn y(inout self, y: SIMD[dtype, 1]):
         """
         Sets the y-component of the vector.
 
@@ -574,7 +588,7 @@ struct Vector3D[dtype: DType = DType.float64](
         """
         self.data[1] = y
 
-    fn y(inout self) -> Scalar[dtype]:
+    fn y(self) -> SIMD[dtype, 1]:
         """
         Returns the y-component of the vector.
 
@@ -583,7 +597,7 @@ struct Vector3D[dtype: DType = DType.float64](
         """
         return self.data[1]
 
-    fn z(inout self, z: Scalar[dtype]):
+    fn z(inout self, z: SIMD[dtype, 1]):
         """
         Sets the z-component of the vector.
 
@@ -592,7 +606,7 @@ struct Vector3D[dtype: DType = DType.float64](
         """
         self.data[2] = z
 
-    fn z(inout self) -> Scalar[dtype]:
+    fn z(self) -> SIMD[dtype, 1]:
         """
         Returns the z-component of the vector.
 
@@ -602,7 +616,7 @@ struct Vector3D[dtype: DType = DType.float64](
         return self.data[2]
 
     # TODO: Implement @property decorator
-    fn rho(inout self) -> Scalar[dtype]:
+    fn rho(inout self) -> SIMD[dtype, 1]:
         """
         Calculates the radial distance in the xy-plane (rho).
 
@@ -611,7 +625,7 @@ struct Vector3D[dtype: DType = DType.float64](
         """
         return math.sqrt(self.x() ** 2 + self.y() ** 2)
 
-    fn mag(inout self) -> Scalar[dtype]:
+    fn mag(self) -> SIMD[dtype, 1]:
         """
         Calculates the magnitude (or length) of the vector.
 
@@ -622,7 +636,7 @@ struct Vector3D[dtype: DType = DType.float64](
             self.data[0] ** 2 + self.data[1] ** 2 + self.data[2] ** 2
         )
 
-    fn r(inout self) -> Scalar[dtype]:
+    fn r(inout self) -> SIMD[dtype, 1]:
         """
         Alias for the magnitude of the vector.
 
@@ -631,7 +645,7 @@ struct Vector3D[dtype: DType = DType.float64](
         """
         return self.mag()
 
-    fn costheta(inout self) -> Scalar[dtype]:
+    fn costheta(inout self) -> SIMD[dtype, 1]:
         """
         Calculates the cosine of the angle theta between the vector and the z-axis.
 
@@ -643,7 +657,7 @@ struct Vector3D[dtype: DType = DType.float64](
         else:
             return self.data[2] / self.mag()
 
-    fn theta(inout self, degree: Bool = False) -> Scalar[dtype]:
+    fn theta(inout self, degree: Bool = False) -> SIMD[dtype, 1]:
         """
         Calculates the angle theta between the vector and the z-axis.
 
@@ -655,11 +669,11 @@ struct Vector3D[dtype: DType = DType.float64](
         """
         var theta = math.acos(self.costheta())
         if degree == True:
-            return theta * 180 / Scalar[dtype](pi)
+            return theta * 180 / SIMD[dtype, 1](pi)
         else:
             return theta
 
-    fn phi(inout self, degree: Bool = False) -> Scalar[dtype]:
+    fn phi(inout self, degree: Bool = False) -> SIMD[dtype, 1]:
         """
         Calculates the angle phi in the xy-plane from the positive x-axis.
 
@@ -671,11 +685,11 @@ struct Vector3D[dtype: DType = DType.float64](
         """
         var phi = math.atan2(self.data[1], self.data[0])
         if degree == True:
-            return phi * 180 / Scalar[dtype](pi)
+            return phi * 180 / SIMD[dtype, 1](pi)
         else:
             return phi
 
-    fn set(inout self, x: Scalar[dtype], y: Scalar[dtype], z: Scalar[dtype]):
+    fn set(inout self, x: SIMD[dtype, 1], y: SIMD[dtype, 1], z: SIMD[dtype, 1]):
         """
         Sets the vector components to the specified values.
 
@@ -688,16 +702,16 @@ struct Vector3D[dtype: DType = DType.float64](
         self.data[1] = y
         self.data[2] = z
 
-    fn tolist(self) -> List[Scalar[dtype]]:
+    fn tolist(self) -> List[SIMD[dtype, 1]]:
         """
         Converts the vector components to a list.
 
         Returns:
             A list containing the scalar components of the vector.
         """
-        return List[Scalar[dtype]](self.data[0], self.data[1], self.data[2])
+        return List[SIMD[dtype, 1]](self.data[0], self.data[1], self.data[2])
 
-    fn mag2(self) -> Scalar[dtype]:
+    fn mag2(self) -> SIMD[dtype, 1]:
         """
         Calculates the squared magnitude of the vector.
 
@@ -706,7 +720,7 @@ struct Vector3D[dtype: DType = DType.float64](
         """
         return self.data[0] ** 2 + self.data[1] ** 2 + self.data[2] ** 2
 
-    fn __abs__(inout self) -> Scalar[dtype]:
+    fn __abs__(inout self) -> SIMD[dtype, 1]:
         """
         Calculates the magnitude of the vector.
 
@@ -759,7 +773,7 @@ struct Vector3D[dtype: DType = DType.float64](
         """
         return self.__nonzero__()
 
-    fn dot(self, other: Self) -> Scalar[dtype]:
+    fn dot(self, other: Self) -> SIMD[dtype, 1]:
         """
         Computes the dot product of this vector with another vector.
 
@@ -788,7 +802,7 @@ struct Vector3D[dtype: DType = DType.float64](
         )
 
     # TODO: Gotta check this function, It returns non sense values for now lol
-    # fn rotate(self, inout axis: Self, angle: Scalar[dtype]) raises:
+    # fn rotate(self, inout axis: Self, angle: SIMD[dtype, 1]) raises:
 
     #     var u = axis.unit()
     #     var cos_theta = math.cos(angle)
@@ -808,7 +822,7 @@ struct Vector3D[dtype: DType = DType.float64](
     #     self.data[1] = y_new
     #     self.data[2] = z_new
 
-    fn rotate_x(inout self, angle: Scalar[dtype]):
+    fn rotate_x(inout self, angle: SIMD[dtype, 1]):
         """
         Rotates the vector around the X-axis by the specified angle.
 
@@ -827,7 +841,7 @@ struct Vector3D[dtype: DType = DType.float64](
         self.data[1] = y_new
         self.data[2] = z_new
 
-    fn rotate_y(inout self, angle: Scalar[dtype]):
+    fn rotate_y(inout self, angle: SIMD[dtype, 1]):
         """
         Rotates the vector around the Y-axis by the specified angle.
 
@@ -846,7 +860,7 @@ struct Vector3D[dtype: DType = DType.float64](
         self.data[1] = y_new
         self.data[2] = z_new
 
-    fn rotate_z(inout self, angle: Scalar[dtype]):
+    fn rotate_z(inout self, angle: SIMD[dtype, 1]):
         """
         Rotates the vector around the Z-axis by the specified angle.
 
@@ -865,7 +879,7 @@ struct Vector3D[dtype: DType = DType.float64](
         self.data[1] = y_new
         self.data[2] = z_new
 
-    fn cos_angle(inout self, inout other: Self) -> Scalar[dtype]:
+    fn cos_angle(inout self, inout other: Self) -> SIMD[dtype, 1]:
         """
         Computes the cosine of the angle between this vector and another vector.
 
@@ -877,7 +891,7 @@ struct Vector3D[dtype: DType = DType.float64](
         """
         return self.dot(other) / (self.mag() * other.mag())
 
-    fn angle(inout self, inout other: Self) -> Scalar[dtype]:
+    fn angle(inout self, inout other: Self) -> SIMD[dtype, 1]:
         """
         Computes the angle in radians between this vector and another vector.
 
@@ -943,7 +957,7 @@ struct Vector3D[dtype: DType = DType.float64](
             self.data
         )
 
-    fn _reduce_sum(self) -> Scalar[dtype]:
+    fn _reduce_sum(self) -> SIMD[dtype, 1]:
         """
         Computes the sum of all elements in the vector using SIMD operations for efficiency.
 
@@ -952,7 +966,7 @@ struct Vector3D[dtype: DType = DType.float64](
         Returns:
             A scalar of type `dtype` representing the sum of all elements in the vector.
         """
-        var reduced = Scalar[dtype](0.0)
+        var reduced = SIMD[dtype, 1](0.0)
         alias simd_width: Int = simdwidthof[dtype]()
 
         @parameter
