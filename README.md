@@ -154,7 +154,7 @@ print(cm_frame.p())  # Print momentum in CM frame
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please feel free to report issues and submit a Pull Request.
 
 ## License
 
@@ -168,7 +168,7 @@ Distributed under the Apache 2.0 License with LLVM Exceptions. See [LICENSE](htt
 - Add more Mojo backends such as [NuMojo](https://github.com/Mojo-Numerics-and-Algorithms-group/NuMojo).
 
 ## Citation
-If you use HEPJo in your research, please cite:
+If you find HEPJo useful in your research adventures, consider giving it a shout-out in your citations!
 
 ```bibtex
 @software{hepjo,
