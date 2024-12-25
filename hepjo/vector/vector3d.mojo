@@ -12,13 +12,13 @@ from math import sqrt, acos, atan2, sinh, log, sin, cos, tan
 import . math_funcs as mf
 
 # Modules
-from .constants import pi
+from ..constants import pi
 
 ################################################################################################################
 ####################################### VECTOR 3D ##############################################################
 ################################################################################################################
 
-
+# maybe _buf being a SIMD[dtype, 4] is better
 struct Vector3D[dtype: DType = DType.float64](
     Stringable, Representable, CollectionElement, Sized, Writable
 ):
@@ -29,7 +29,6 @@ struct Vector3D[dtype: DType = DType.float64](
     """The size of the Vector."""
 
     """ LIFETIME METHODS """
-
     @always_inline("nodebug")
     fn __init__(mut self):
         """
@@ -106,7 +105,7 @@ struct Vector3D[dtype: DType = DType.float64](
     ### TRAITS ###
     fn __str__(self) -> String:
         """
-        Enables str(array).
+        To print 3D vector.
         """
         return String.write(self)
 
@@ -771,11 +770,11 @@ struct Vector3D[dtype: DType = DType.float64](
         Rotates this vector around an arbitrary axis by the specified angle.
 
         Args:
-            axis: The axis vector to rotate around (will be normalized)
-            angle: The angle in radians to rotate by
+            axis: The axis vector to rotate around (will be normalized).
+            angle: The angle in radians to rotate by.
 
         Returns:
-            A new vector that is this vector rotated around the axis
+            A new vector that is this vector rotated around the axis.
         """
         # Normalize the axis vector
         var u = axis.unit()

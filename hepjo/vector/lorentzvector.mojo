@@ -12,7 +12,7 @@ import . math_funcs as mf
 
 # Modules
 from .vector3d import Vector3D
-from .constants import pi
+from ..constants import pi
 
 
 # add support for arbitrary metric
