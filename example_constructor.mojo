@@ -2,12 +2,12 @@ from hepjo import *
 
 
 fn main() raises:
-    # var a = v3d(1, 2, 3)
-    # var b = v3d(2, 3, 4)
-    # print(a.dot(b))
+    var a = v3d(1, 2, 3)
+    var b = v3d(2, 3, 4)
+    print(a.dot(b))
 
-    # var vec = LorentzVector[f64](3.0, 4.0, 0.0, 5.0)
-    # print(vec.mag())
+    var vec = LorentzVector[f64](3.0, 4.0, 0.0, 5.0)
+    print(vec.mag())
 
     var empty = v2d()
     print("empty: ", empty)
