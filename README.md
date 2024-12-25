@@ -161,11 +161,11 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 Distributed under the Apache 2.0 License with LLVM Exceptions. See [LICENSE](https://github.com/shivasankarka/HEPJo/blob/main/LICENSE) and the LLVM [License](https://llvm.org/LICENSE.txt) for more information.
 
 ## Future Plans
-
-- Integration with particle data tables
-- Integration with common HEP analysis frameworks
-- GPU support for large array computations
-- Add more backends such as [NuMojo](https://github.com/Mojo-Numerics-and-Algorithms-group/NuMojo)
+- Integration with PDG particle data.
+- Implement a System of Units similar to GEANT4.
+- Integration with common HEP analysis frameworks.
+- GPU support for large array computations.
+- Add more Mojo backends such as [NuMojo](https://github.com/Mojo-Numerics-and-Algorithms-group/NuMojo).
 
 ## Citation
 If you use HEPJo in your research, please cite:
