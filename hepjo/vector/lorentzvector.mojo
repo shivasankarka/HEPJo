@@ -1,457 +1,469 @@
-# Defaults
 from builtin.dtype import DType
+from builtin.type_aliases import Origin
+from memory import UnsafePointer
+from memory import memset_zero, memcpy
+from sys import simdwidthof
+
 from collections.vector import InlinedFixedVector
 from algorithm import vectorize
+
 from math import sqrt, acos, atan2, sinh, log, sin, cos, tan
-import .math_funcs as mf
+import . math_funcs as mf
 
 # Modules
 from .vector3d import Vector3D
 from .constants import pi
 
-@value
-struct _lorentzvectorIter[
-    is_mutable: Bool, //,
-    lifetime: AnyLifetime[is_mutable].type,
-    dtype: DType,
-    sign: Int, 
-    forward: Bool = True,
-]:
-    """Iterator for LorentzVector.
 
-    Parameters:
-        is_mutable: Whether the iterator is mutable.
-        lifetime: The lifetime of the underlying NDArray data.
-        dtype: The data type of the item.
-        sign: The metric signature.
-        forward: The iteration direction. `False` is backwards.
-    """
-
-    var index: Int
-    var array: LorentzVector[dtype, sign]
-    var length: Int
-
-    fn __init__(
-        inout self,
-        array: LorentzVector[dtype, sign],
-        length: Int,
-    ):
-        self.index = 0 if forward else length
-        self.length = length
-        self.array = array
-
-    fn __iter__(self) -> Self:
-        return self
-
-    fn __next__(inout self) raises -> Scalar[dtype]:
-        @parameter
-        if forward:
-            var current_index = self.index
-            self.index += 1
-            return self.array.__getitem__(current_index)
-        else:
-            var current_index = self.index
-            self.index -= 1
-            return self.array.__getitem__(current_index)
-
-    fn __len__(self) -> Int:
-        @parameter
-        if forward:
-            return self.length - self.index
-        else:
-            return self.index
-
-@value
-struct LorentzVector[dtype: DType = DType.float64, sign: Int = -1](
-    Intable, CollectionElement, Sized
+# add support for arbitrary metric
+struct LorentzVector[dtype: DType = DType.float64](
+    Stringable, Representable, CollectionElement, Sized, Writable
 ):
-
     # Fields
-    var data: DTypePointer[dtype]
-    """3D vector data."""
+    var _buf: UnsafePointer[Scalar[dtype]]
+    """4D vector data."""
     alias size: Int = 4
     """The size of the Vector."""
-    alias metric: StaticIntTuple[4]  = StaticIntTuple[4](-1, 1, 1, 1) if sign == -1 else StaticIntTuple[4](1, -1, -1, -1)
+    # alias metric: StaticIntTuple[4]  = StaticIntTuple[4](-1, 1, 1, 1) if sign == -1 else StaticIntTuple[4](1, -1, -1, -1)
 
-    """Default constructor."""
+    """ LIFETIME METHODS """
 
-    fn __init__(inout self):
+    @always_inline("nodebug")
+    fn __init__(mut self):
         """
-        Initializes a 4D vector with zero elements.
+        Initializes a Lorentz vector with zero elements.
         """
-        self.data = DTypePointer[dtype].alloc(self.size)
-        memset_zero(self.data, self.size)
+        self._buf = UnsafePointer[Scalar[dtype]].alloc(self.size)
+        memset_zero(self._buf, self.size)
 
-    fn __init__(inout self, *data: Scalar[dtype]) raises:
-        if len(data) != 4:
-            raise Error("Length of given data is more than 4.")
-        self.data = DTypePointer[dtype].alloc(self.size)
-        memset_zero(self.data, self.size)
+    @always_inline("nodebug")
+    fn __init__(mut self, *data: Scalar[dtype]) raises:
+        """
+        Initializes a Lorentz vector with the given elements.
+        """
+        if len(data) != self.size:
+            raise Error("Length of input should be 4")
+        self._buf = UnsafePointer[Scalar[dtype]].alloc(self.size)
+        memset_zero(self._buf, self.size)
         for i in range(self.size):
-            self.data[i] = data[i]
+            self._buf[i] = data[i]
 
-    fn __init__(inout self, *data: List[Scalar[dtype]]):
-        self.data = DTypePointer[dtype].alloc(self.size)
-        memset_zero(self.data, self.size)
+    @always_inline("nodebug")
+    fn __init__(mut self, data: List[Scalar[dtype]]) raises:
+        """
+        Initializes a Lorentz vector with the given List of elements.
+        """
+        if len(data) != self.size:
+            raise Error("Length of input should be 4")
+        self._buf = UnsafePointer[Scalar[dtype]].alloc(self.size)
+        memset_zero(self._buf, self.size)
         for i in range(self.size):
-            self.data[i] = data[i]
+            self._buf[i] = data[i]
 
     fn __init__(
-        inout self, vector3d: Vector3D[dtype], t: Scalar[dtype]
-    ) raises:
-        self.data = DTypePointer[dtype].alloc(self.size)
-        self.data[0] = vector3d[0]
-        self.data[1] = vector3d[1]
-        self.data[2] = vector3d[2]
-        self.data[3] = t
+        mut self,
+        x: Scalar[dtype],
+        y: Scalar[dtype],
+        z: Scalar[dtype],
+        t: Scalar[dtype],
+    ):
+        """
+        Initializes a Lorentz vector with the given elements.
+        """
+        self._buf = UnsafePointer[Scalar[dtype]].alloc(self.size)
+        self._buf[0] = x
+        self._buf[1] = y
+        self._buf[2] = z
+        self._buf[3] = t
 
-    fn __init__(
-        inout self, x: Scalar[dtype], y: Scalar[dtype], z: Scalar[dtype], t: Scalar[dtype]
-    ) raises:
-        self.data = DTypePointer[dtype].alloc(self.size)
-        self.data[0] = x
-        self.data[1] = y
-        self.data[2] = z
-        self.data[3] = t
+    fn __init__(mut self, vector: Vector3D[dtype], t: Scalar[dtype]) raises:
+        """
+        Initializes a Lorentz vector from a 3D vector and t component.
+        """
+        self._buf = UnsafePointer[Scalar[dtype]].alloc(self.size)
+        self._buf[0] = vector[0]
+        self._buf[1] = vector[1]
+        self._buf[2] = vector[2]
+        self._buf[3] = t
 
+    fn __init__(mut self, vector: LorentzVector[dtype]) raises:
+        """
+        Initializes a Lorentz vector from another LorentzVector.
+        """
+        self._buf = UnsafePointer[Scalar[dtype]].alloc(self.size)
+        memcpy(self._buf, vector._buf, self.size)
+
+    fn __copyinit__(out self, other: LorentzVector[dtype]):
+        """
+        Initializes a Lorentz vector as a copy of another vector.
+        """
+        self._buf = UnsafePointer[Scalar[dtype]].alloc(self.size)
+        memcpy(self._buf, other._buf, self.size)
+
+    fn __moveinit__(mut self, owned other: LorentzVector[dtype]):
+        """
+        Initializes a LorentzVector vector by moving the data from another vector.
+        """
+        self._buf = other._buf
+
+    fn __del__(owned self):
+        self._buf.free()
+
+    """ GETTER & SETTER METHODS """
+
+    fn __getitem__(self, index: Int) raises -> Scalar[dtype]:
+        if index >= 4:
+            raise Error("Invalid index: index exceeds size")
+        elif index < 0:
+            return self._buf.load(index + self.size)
+        else:
+            return self._buf.load(index)
+
+    fn __setitem__(mut self, index: Int, value: Scalar[dtype]) raises:
+        if index >= 4:
+            raise Error("Invalid index: index exceeds size")
+        self._buf.store(index, value)
+
+    ### TRAITS ###
     fn __str__(self) -> String:
         """
-        To use Stringable trait and print the array.
+        To print the LorentzVector.
         """
-        var printStr: String = "LorentzVector: ["
-        for i in range(self.size):
-            try:
-                printStr += str(self[i])
-            except:
-                print("Cannot convery LorentzVector to string.")
-            if i != 3:
-                printStr += " , "
+        return String.write(self)
 
-        printStr += "]" + "\n"
-        printStr += "dtype=" + str(dtype) + "; " + "Sign: "
-        if sign == -1:
-            printStr += "-+++"
-        else:
-            printStr += "+---"
-        return printStr
-    
+    fn write_to[W: Writer](self, mut writer: W):
+        try:
+            var printStr: String = "LorentzVector: ["
+            for i in range(self.size):
+                printStr += str(self[i])
+                if i != 3:
+                    printStr += " , "
+
+            printStr += "]" + "\n"
+            printStr += "dtype=" + str(dtype)
+            writer.write(printStr)
+        except e:
+            writer.write("Cannot convert array to string")
+
     fn print(self) raises -> None:
         """Prints the LorentzVector."""
         print(self.__str__() + "\n")
         print()
 
-    fn __repr__(inout self) -> String:
+    fn __repr__(self) -> String:
         """Compute the "official" string representation of LorentzVector."""
         return (
             "LorentzVector[DType."
             + str(dtype)
             + "](x="
-            + str(self.data[0])
+            + str(self._buf[0])
             + ", y="
-            + str(self.data[1])
+            + str(self._buf[1])
             + ", z="
-            + str(self.data[2])
+            + str(self._buf[2])
             + ", t="
-            + str(self.data[3])
+            + str(self._buf[3])
             + ")"
         )
 
-    fn __getitem__(self, index: Int) raises -> Scalar[dtype]:
-        if index > 3:
-            raise Error("Invalid index: index exceeds size")
-        elif index < 0:
-            return self.data.load[width=1](index + self.size)
-        else:
-            return self.data.load[width=1](index)
-
-    fn __setitem__(inout self, index: Int, value: Scalar[dtype]) raises:
-        if index > 3:
-            raise Error("Invalid index: index exceeds size")
-        elif index < 0:
-            self.data.store[width=1](index + self.size, value)
-        else:
-            self.data.store[width=1](index, value)
-
     fn __len__(self) -> Int:
-        """Returns the length of the Vector3D (=3)."""
+        """Returns the length of the LorentzVector (=4)."""
         return self.size
 
-    # TODO: change this to represent the Int version
-    fn __int__(self) -> Int:
-        return self.size
-
-    fn __iter__(self) raises -> _lorentzvectorIter[__lifetime_of(self), dtype, sign]:
-        """Iterate over elements of the Vector3D, returning copied value.
+    fn __iter__(self) raises -> _lorentzvectorIter[__origin_of(self), dtype]:
+        """Iterate over elements of the LorentzVector, returning copied value.
 
         Returns:
-            An iterator of Vector3D elements.
+            An iterator of LorentzVector elements.
 
         Notes:
             Need to add lifetimes after the new release.
         """
 
-        return _lorentzvectorIter[__lifetime_of(self), dtype, sign](
+        return _lorentzvectorIter[__origin_of(self), dtype](
             array=self,
             length=self.size,
         )
 
     fn __reversed__(
         self,
-    ) raises -> _lorentzvectorIter[__lifetime_of(self), dtype, sign, forward=False]:
-        """Iterate backwards over elements of the Vector3D, returning
+    ) raises -> _lorentzvectorIter[__origin_of(self), dtype, forward=False]:
+        """Iterate backwards over elements of the LorentzVector, returning
         copied value.
 
         Returns:
-            A reversed iterator of Vector3D elements.
+            A reversed iterator of LorentzVector elements.
         """
 
-        return _lorentzvectorIter[__lifetime_of(self), dtype, sign, forward=False](
+        return _lorentzvectorIter[__origin_of(self), dtype, forward=False](
             array=self,
             length=self.size,
         )
-
-    fn __del__(owned self):
-        self.data.free()
-
-    fn __pos__(self) -> Self:
-        return self * (1.0)
-
-    fn __neg__(self) -> Self:
-        return self * (-1.0)
 
     fn load[width: Int = 1](self, idx: Int) -> SIMD[dtype, width]:
         """
         SIMD load elements.
         """
-        return self.data.load[width=width](idx)
+        return self._buf.load[width=width](idx)
 
-    fn store[width: Int = 1](inout self, idx: Int, val: SIMD[dtype, width]):
+    fn store[width: Int = 1](mut self, idx: Int, val: SIMD[dtype, width]):
         """
         SIMD store elements.
         """
-        self.data.store[width=width](idx, val)
+        self._buf.store(idx, val)
 
-    fn unsafe_ptr(self) -> DTypePointer[dtype, 0]:
+    fn unsafe_ptr(self) -> UnsafePointer[Scalar[dtype]]:
         """
         Retreive pointer without taking ownership.
         """
-        return self.data
+        return self._buf
 
-    fn typeof(inout self) -> DType:
+    fn typeof(mut self) -> DType:
         return dtype
 
-    fn typeof_str(inout self) -> String:
+    fn typeof_str(mut self) -> String:
         return dtype.__str__()
 
     """COMPARISIONS."""
+
     @always_inline("nodebug")
-    fn __eq__(self, other: Self) raises -> Vector3D[DType.bool]:
+    fn __eq__(self, other: Self) raises -> LorentzVector[DType.bool]:
         """
-        Itemwise equivelence.
+        Itemwise equivalence.
         """
-        var result:Vector3D[DType.bool] = Vector3D[DType.bool]()
+        var result: LorentzVector[DType.bool] = LorentzVector[DType.bool]()
         mf.compare_2_vectors[self.size, dtype, SIMD.__eq__](
-            self.data, other.data, result.data
+            self._buf, other._buf, result._buf
         )
         return result
 
     @always_inline("nodebug")
-    fn __eq__(self, other: SIMD[dtype, 1]) raises -> Vector3D[DType.bool]:
+    fn __eq__(self, other: SIMD[dtype, 1]) raises -> LorentzVector[DType.bool]:
         """
-        Itemwise equivelence between scalar and Array.
+        Itemwise equivalence between scalar and Array.
         """
-        var result:Vector3D[DType.bool] = Vector3D[DType.bool]()
+        var result: LorentzVector[DType.bool] = LorentzVector[DType.bool]()
         mf.compare_vector_and_scalar[self.size, dtype, SIMD.__eq__](
-            self.data, other, result.data
+            self._buf, other, result._buf
         )
         return result
 
     @always_inline("nodebug")
-    fn __ne__(self, other: Vector3D[dtype]) raises -> Vector3D[DType.bool]:
+    fn __ne__(
+        self, other: LorentzVector[dtype]
+    ) raises -> LorentzVector[DType.bool]:
         """
         Itemwise nonequivelence between scalar and Array.
         """
-        var result:Vector3D[DType.bool] = Vector3D[DType.bool]()
+        var result: LorentzVector[DType.bool] = LorentzVector[DType.bool]()
         mf.compare_2_vectors[self.size, dtype, SIMD.__ne__](
-            self.data, other.data, result.data
+            self._buf, other._buf, result._buf
         )
         return result
 
     @always_inline("nodebug")
-    fn __ne__(self, other: SIMD[dtype, 1]) raises -> Vector3D[DType.bool]:
+    fn __ne__(self, other: SIMD[dtype, 1]) raises -> LorentzVector[DType.bool]:
         """
         Itemwise nonequivelence.
         """
-        var result:Vector3D[DType.bool] = Vector3D[DType.bool]()
+        var result: LorentzVector[DType.bool] = LorentzVector[DType.bool]()
         mf.compare_vector_and_scalar[self.size, dtype, SIMD.__ne__](
-            self.data, other, result.data
+            self._buf, other, result._buf
         )
         return result
 
     @always_inline("nodebug")
-    fn __lt__(self, other: Vector3D[dtype]) raises -> Vector3D[DType.bool]:
+    fn __lt__(
+        self, other: LorentzVector[dtype]
+    ) raises -> LorentzVector[DType.bool]:
         """
         Itemwise less than between scalar and Array.
         """
-        var result:Vector3D[DType.bool] = Vector3D[DType.bool]()
+        var result: LorentzVector[DType.bool] = LorentzVector[DType.bool]()
         mf.compare_2_vectors[self.size, dtype, SIMD.__lt__](
-            self.data, other.data, result.data
+            self._buf, other._buf, result._buf
         )
         return result
 
     @always_inline("nodebug")
-    fn __lt__(self, other: SIMD[dtype, 1]) raises -> Vector3D[DType.bool]:
+    fn __lt__(self, other: SIMD[dtype, 1]) raises -> LorentzVector[DType.bool]:
         """
         Itemwise less than.
         """
-        var result:Vector3D[DType.bool] = Vector3D[DType.bool]()
+        var result: LorentzVector[DType.bool] = LorentzVector[DType.bool]()
         mf.compare_vector_and_scalar[self.size, dtype, SIMD.__lt__](
-            self.data, other, result.data
+            self._buf, other, result._buf
         )
         return result
 
     @always_inline("nodebug")
-    fn __le__(self, other: Vector3D[dtype]) raises -> Vector3D[DType.bool]:
+    fn __le__(
+        self, other: LorentzVector[dtype]
+    ) raises -> LorentzVector[DType.bool]:
         """
         Itemwise less than or equal to between scalar and Array.
         """
-        var result:Vector3D[DType.bool] = Vector3D[DType.bool]()
+        var result: LorentzVector[DType.bool] = LorentzVector[DType.bool]()
         mf.compare_2_vectors[self.size, dtype, SIMD.__le__](
-            self.data, other.data, result.data
+            self._buf, other._buf, result._buf
         )
         return result
 
     @always_inline("nodebug")
-    fn __le__(self, other: SIMD[dtype, 1]) raises -> Vector3D[DType.bool]:
+    fn __le__(self, other: SIMD[dtype, 1]) raises -> LorentzVector[DType.bool]:
         """
         Itemwise less than or equal to.
         """
-        var result:Vector3D[DType.bool] = Vector3D[DType.bool]()
+        var result: LorentzVector[DType.bool] = LorentzVector[DType.bool]()
         mf.compare_vector_and_scalar[self.size, dtype, SIMD.__le__](
-            self.data, other, result.data
+            self._buf, other, result._buf
         )
         return result
 
     @always_inline("nodebug")
-    fn __gt__(self, other: Vector3D[dtype]) raises -> Vector3D[DType.bool]:
+    fn __gt__(
+        self, other: LorentzVector[dtype]
+    ) raises -> LorentzVector[DType.bool]:
         """
         Itemwise greater than between scalar and Array.
         """
-        var result:Vector3D[DType.bool] = Vector3D[DType.bool]()
+        var result: LorentzVector[DType.bool] = LorentzVector[DType.bool]()
         mf.compare_2_vectors[self.size, dtype, SIMD.__gt__](
-            self.data, other.data, result.data
+            self._buf, other._buf, result._buf
         )
         return result
 
     @always_inline("nodebug")
-    fn __gt__(self, other: SIMD[dtype, 1]) raises -> Vector3D[DType.bool]:
+    fn __gt__(self, other: SIMD[dtype, 1]) raises -> LorentzVector[DType.bool]:
         """
         Itemwise greater than.
         """
-        var result:Vector3D[DType.bool] = Vector3D[DType.bool]()
+        var result: LorentzVector[DType.bool] = LorentzVector[DType.bool]()
         mf.compare_vector_and_scalar[self.size, dtype, SIMD.__gt__](
-            self.data, other, result.data
+            self._buf, other, result._buf
         )
         return result
 
     @always_inline("nodebug")
-    fn __ge__(self, other: Vector3D[dtype]) raises -> Vector3D[DType.bool]:
+    fn __ge__(
+        self, other: LorentzVector[dtype]
+    ) raises -> LorentzVector[DType.bool]:
         """
         Itemwise less than or equal to between scalar and Array.
         """
-        var result:Vector3D[DType.bool] = Vector3D[DType.bool]()
+        var result: LorentzVector[DType.bool] = LorentzVector[DType.bool]()
         mf.compare_2_vectors[self.size, dtype, SIMD.__ge__](
-            self.data, other.data, result.data
+            self._buf, other._buf, result._buf
         )
         return result
 
     @always_inline("nodebug")
-    fn __ge__(self, other: SIMD[dtype, 1]) raises -> Vector3D[DType.bool]:
+    fn __ge__(self, other: SIMD[dtype, 1]) raises -> LorentzVector[DType.bool]:
         """
         Itemwise greater than or equal to.
         """
-        var result:Vector3D[DType.bool] = Vector3D[DType.bool]()
+        var result: LorentzVector[DType.bool] = LorentzVector[DType.bool]()
         mf.compare_vector_and_scalar[self.size, dtype, SIMD.__ge__](
-            self.data, other, result.data
+            self._buf, other, result._buf
         )
         return result
 
-    #
     """ARITHMETIC."""
+
+    fn __pos__(self) raises -> Self:
+        """
+        Unary positve returens self unless boolean type.
+        """
+        return self * Scalar[dtype](1)
+
+    fn __neg__(self) raises -> Self:
+        """
+        Unary negative returens self unless boolean type.
+        """
+        return self * Scalar[dtype](-1)
+
     fn __add__(self, other: Scalar[dtype]) -> Self:
-        var result:Self = Self()
+        var result: Self = Self()
         mf.elementwise_scalar_arithmetic[self.size, dtype, SIMD.__add__](
-            self.data, other, result.data
+            self._buf, other, result._buf
         )
-        return result
+        return result^
 
     fn __add__(self, other: Self) -> Self:
-        var result:Self = Self()
+        var result: Self = Self()
         mf.elementwise_array_arithmetic[self.size, dtype, SIMD.__add__](
-            self.data, other.data, result.data
+            self._buf, other._buf, result._buf
         )
-        return result
+        return result^
 
-    fn __radd__(self, other: Scalar[dtype]) -> Self:
+    fn __radd__(mut self, other: Scalar[dtype]) -> Self:
         return self + other
 
-    fn __iadd__(inout self, other: Scalar[dtype]):
+    fn __radd__(self, other: Self) -> Self:
+        return self + other
+
+    fn __iadd__(mut self, other: Scalar[dtype]):
+        self = self + other
+
+    fn __iadd__(mut self, other: Self):
         self = self + other
 
     fn __sub__(self, other: Scalar[dtype]) -> Self:
-        var result:Self = Self()
+        var result: Self = Self()
         mf.elementwise_scalar_arithmetic[self.size, dtype, SIMD.__sub__](
-            self.data, other, result.data
+            self._buf, other, result._buf
         )
-        return result
+        return result^
 
     fn __sub__(self, other: Self) -> Self:
-        # return mf.elementwise_array_arithmetic[self.size, dtype, SIMD.__sub__](
-            # self.data, other.data
-        # )
-        var result:Self = Self()
+        var result: Self = Self()
         mf.elementwise_array_arithmetic[self.size, dtype, SIMD.__sub__](
-            self.data, other.data, result.data
+            self._buf, other._buf, result._buf
         )
-        return result
+        return result^
 
-    fn __rsub__(self, other: Scalar[dtype]) -> Self:
+    fn __rsub__(self, other: Scalar[dtype]) raises -> Self:
         return -(self - other)
 
-    fn __isub__(inout self, other: Scalar[dtype]):
+    fn __rsub__(self, other: Self) raises -> Self:
+        return -(self - other)
+
+    fn __isub__(mut self, other: Scalar[dtype]):
+        self = self - other
+
+    fn __isub__(mut self, other: Self):
         self = self - other
 
     fn __mul__(self, other: Scalar[dtype]) -> Self:
-        var result:Self = Self()
+        var result: Self = Self()
         mf.elementwise_scalar_arithmetic[self.size, dtype, SIMD.__mul__](
-            self.data, other, result.data
+            self._buf, other, result._buf
         )
-        return result
+        return result^
 
     fn __mul__(self, other: Self) -> Self:
-        # return mf.elementwise_array_arithmetic[self.size, dtype, SIMD.__mul__](
-        #     self.data, other.data
-        # )
-        var result:Self = Self()
+        var result: Self = Self()
         mf.elementwise_array_arithmetic[self.size, dtype, SIMD.__mul__](
-            self.data, other.data, result.data
+            self._buf, other._buf, result._buf
         )
-        return result
+        return result^
 
     fn __rmul__(self, other: Scalar[dtype]) -> Self:
         return self * other
 
-    fn __imul__(inout self, other: Scalar[dtype]):
+    fn __rmul__(self, other: Self) -> Self:
+        return self * other
+
+    fn __imul__(mut self, other: Scalar[dtype]):
         self = self * other
 
-    # * since "*" already does element wise calculation, I think matmul is redundant for 1D array, but I could use it for dot products
-    # fn __matmul__(inout self, other:Self) -> Scalar[dtype]:
-    #     return self._elementwise_array_arithmetic[SIMD.__mul__](other)._reduce_sum()
+    fn __imul__(mut self, other: Self):
+        self = self * other
 
     fn __pow__(self, p: Int) -> Self:
         return self._elementwise_pow(p)
 
-    fn __ipow__(inout self, p: Int):
+    fn __ipow__(mut self, p: Int):
         self = self.__pow__(p)
 
     fn _elementwise_pow(self, p: Int) -> Self:
@@ -460,126 +472,177 @@ struct LorentzVector[dtype: DType = DType.float64, sign: Int = -1](
 
         @parameter
         fn tensor_scalar_vectorize[simd_width: Int](idx: Int) -> None:
-            new_vec.data.store[width=simd_width](
-                idx, pow(self.data.load[width=simd_width](idx), p)
-            )
+            new_vec._buf.store(idx, pow(self._buf.load(idx), p))
 
         vectorize[tensor_scalar_vectorize, simd_width](self.size)
         return new_vec
 
-    fn __truediv__(inout self, other: Scalar[dtype]) -> Self:
-        var result:Self = Self()
+    fn __truediv__(self, other: Scalar[dtype]) -> Self:
+        var result: Self = Self()
         mf.elementwise_scalar_arithmetic[self.size, dtype, SIMD.__truediv__](
-            self.data, other, result.data
+            self._buf, other, result._buf
         )
-        return result
+        return result^
 
-    fn __truediv__(inout self, other: Self) -> Self:
-        # return mf.elementwise_array_arithmetic[
-        #     self.size, dtype, SIMD.__truediv__
-        # ](self.data, other.data)
-        var result:Self = Self()
+    fn __truediv__(self, other: Self) -> Self:
+        var result: Self = Self()
         mf.elementwise_array_arithmetic[self.size, dtype, SIMD.__truediv__](
-            self.data, other.data, result.data
+            self._buf, other._buf, result._buf
         )
-        return result
+        return result^
 
-    fn __itruediv__(inout self, s: Scalar[dtype]):
-        self = self.__truediv__(s)
+    fn __rtruediv__(self, other: Scalar[dtype]) -> Self:
+        return self.__truediv__(other)
 
-    fn __itruediv__(inout self, other: Self):
+    fn __rtruediv__(self, other: Self) -> Self:
+        return self.__truediv__(other)
+
+    fn __itruediv__(mut self, other: Scalar[dtype]):
         self = self.__truediv__(other)
 
-    fn __rtruediv__(inout self, s: Scalar[dtype]) -> Self:
-        return self.__truediv__(s)
+    fn __itruediv__(mut self, other: Self):
+        self = self.__truediv__(other)
 
-    # PROPERTIES
+    # * since "*" already does element wise calculation, It's redundant for 1D array, but I could use it for dot products
+    fn __matmul__(mut self, other: Self) -> Scalar[dtype]:
+        return (
+            self._buf[3] * other._buf[3]
+            - (
+                self._buf.load[width=2](0) * other._buf.load[width=2](0)
+            ).reduce_add()
+            - self._buf.load(2) * other._buf.load(2)
+        )
+
+    # * STATIC METHODS
+    @staticmethod
+    fn origin[dtype: DType = DType.float64]() -> LorentzVector[dtype]:
+        return LorentzVector[dtype](0.0, 0.0, 0.0, 0.0)
+
+    @staticmethod
+    fn frompoint[
+        dtype: DType = DType.float64
+    ](
+        x: Scalar[dtype], y: Scalar[dtype], z: Scalar[dtype], t: Scalar[dtype]
+    ) -> LorentzVector[dtype]:
+        return LorentzVector[dtype](x=x, y=y, z=z, t=t)
+
+    @staticmethod
+    fn fromvector[
+        dtype: DType = DType.float64
+    ](vector: LorentzVector[dtype]) raises -> LorentzVector[dtype]:
+        return LorentzVector[dtype](vector)
+
+    @staticmethod
+    fn fromsphericalcoords[
+        dtype: DType = DType.float64
+    ](
+        r: Scalar[dtype],
+        theta: Scalar[dtype],
+        phi: Scalar[dtype],
+        t: Scalar[dtype],
+    ) -> LorentzVector[dtype]:
+        var x: Scalar[dtype] = r * sin(theta) * cos(phi)
+        var y: Scalar[dtype] = r * sin(theta) * sin(phi)
+        var z: Scalar[dtype] = r * cos(theta)
+        return LorentzVector[dtype](x, y, z, t)
+
+    @staticmethod
+    fn fromcylindricalcoodinates[
+        dtype: DType = DType.float64
+    ](
+        rho: Scalar[dtype],
+        phi: Scalar[dtype],
+        z: Scalar[dtype],
+        t: Scalar[dtype],
+    ) -> LorentzVector[dtype]:
+        var x: Scalar[dtype] = rho * cos(phi)
+        var y: Scalar[dtype] = rho * sin(phi)
+        return LorentzVector[dtype](x, y, z, t)
+
+    @staticmethod
+    fn fromlist[
+        dtype: DType = DType.float64
+    ](iterable: List[Scalar[dtype]]) raises -> LorentzVector[dtype]:
+        if len(iterable) == 4:
+            return LorentzVector[dtype](
+                iterable[0], iterable[1], iterable[2], iterable[3]
+            )
+        else:
+            raise Error("Iterable size does not fit a LorentzVector")
+
+    """ PROPERTIES """
+
+    fn x(mut self, x: Scalar[dtype]):
+        """
+        Sets the x-component of the vector.
+
+        Args:
+            x: The new value for the x-component.
+        """
+        self._buf[0] = x
+
     fn x(self) -> Scalar[dtype]:
-        return self.data[0]
+        """
+        Returns the x-component of the vector.
+
+        Returns:
+            The value of the x-component.
+        """
+        return self._buf[0]
+
+    fn y(mut self, y: Scalar[dtype]):
+        """
+        Sets the y-component of the vector.
+
+        Args:
+            y: The new value for the y-component.
+        """
+        self._buf[1] = y
 
     fn y(self) -> Scalar[dtype]:
-        return self.data[1]
+        """
+        Returns the y-component of the vector.
+
+        Returns:
+            The value of the y-component.
+        """
+        return self._buf[1]
+
+    fn z(mut self, z: Scalar[dtype]):
+        """
+        Sets the z-component of the vector.
+
+        Args:
+            z: The new value for the z-component.
+        """
+        self._buf[2] = z
 
     fn z(self) -> Scalar[dtype]:
-        return self.data[2]
+        """
+        Returns the z-component of the vector.
+
+        Returns:
+            The value of the z-component.
+        """
+        return self._buf[2]
+
+    fn t(self, t: Scalar[dtype]):
+        """
+        Sets the time component of the vector.
+        """
+        self._buf[3] = t
 
     fn t(self) -> Scalar[dtype]:
-        return self.data[3]
+        """
+        Returns the time component of the vector.
 
-    fn vector(self) -> Vector3D[dtype]:
-        return Vector3D[dtype](x= self.data[0], y= self.data[1], z= self.data[2])
-
-    fn x(self, value: Scalar[dtype]):
-        self.data[0] = value
-
-    fn y(self, value: Scalar[dtype]):
-        self.data[1] = value
-
-    fn z(self, value: Scalar[dtype]):
-        self.data[2] = value
-
-    fn t(self, value: Scalar[dtype]):
-        self.data[3] = value
-
-    fn mag(inout self) -> Scalar[dtype]:
-        return sqrt(self.x() ** 2 + self.y() ** 2 + self.z() ** 2)
-
-    fn mag2(inout self) -> Scalar[dtype]:
-        return self.x() ** 2 + self.y() ** 2 + self.z() ** 2
-
-    fn magl2(inout self) -> Scalar[dtype]:
-        return self.data[3] ** 2 - self.mag2()
-
-    fn magl(inout self) -> Scalar[dtype]:
-        var magn2 = self.magl2()
-        return sqrt(magn2) if magn2 > 0.0 else -sqrt(-magn2)
-
-    fn costheta(inout self) -> Scalar[dtype]:
-        if self.mag() == 0.0:
-            return 1.0
-        else:
-            return self.data[2] / self.mag()
-
-    fn theta(inout self, degree: Bool = False) -> Scalar[dtype]:
-        var theta = acos(self.costheta())
-        if degree == True:
-            return theta * 180 / Scalar[dtype](pi)
-        else:
-            return theta
-
-    fn phi(inout self, degree: Bool = False) -> Scalar[dtype]:
-        var phi = atan2(self.data[1], self.data[0])
-        if degree == True:
-            return phi * 180 / Scalar[dtype](pi)
-        else:
-            return phi
-
-    fn px(inout self) -> Scalar[dtype]:
-        return self.x()
-
-    fn px(inout self, px: Scalar[dtype]):
-        self.x(px)
-
-    fn py(inout self) -> Scalar[dtype]:
-        return self.y()
-
-    fn py(inout self, py: Scalar[dtype]):
-        self.y(py)
-
-    fn pz(inout self) -> Scalar[dtype]:
-        return self.z()
-
-    fn pz(inout self, pz: Scalar[dtype]):
-        self.z(pz)
-
-    fn e(inout self) -> Scalar[dtype]:
-        return self.t()
-
-    fn m(inout self) -> Scalar[dtype]:
-        return sqrt(self.e() ** 2 - self.mag2())
+        Returns:
+            The value of the z-component.
+        """
+        return self._buf[3]
 
     fn set(
-        inout self,
+        mut self,
         x: Scalar[dtype],
         y: Scalar[dtype],
         z: Scalar[dtype],
@@ -591,23 +654,23 @@ struct LorentzVector[dtype: DType = DType.float64, sign: Int = -1](
         self.t(t)
 
     fn setpxpypzm(
-        inout self,
+        mut self,
         px: Scalar[dtype],
         py: Scalar[dtype],
         pz: Scalar[dtype],
         m: Scalar[dtype],
     ):
-        self.data[0] = px
-        self.data[1] = py
-        self.data[2] = pz
+        self._buf[0] = px
+        self._buf[1] = py
+        self._buf[2] = pz
 
         if m > 0.0:
-            self.data[3] = sqrt(px**2 + py**2 + pz**2 + m**2)
+            self._buf[3] = sqrt(px**2 + py**2 + pz**2 + m**2)
         else:
-            self.data[3] = sqrt(px**2 + py**2 + pz**2 - m**2)
+            self._buf[3] = sqrt(px**2 + py**2 + pz**2 - m**2)
 
     fn setpxpypze(
-        inout self,
+        mut self,
         px: Scalar[dtype],
         py: Scalar[dtype],
         pz: Scalar[dtype],
@@ -616,7 +679,7 @@ struct LorentzVector[dtype: DType = DType.float64, sign: Int = -1](
         self.set(px, py, pz, e)
 
     fn setptetaphim(
-        inout self,
+        mut self,
         pt: Scalar[dtype],
         eta: Scalar[dtype],
         phi: Scalar[dtype],
@@ -628,7 +691,7 @@ struct LorentzVector[dtype: DType = DType.float64, sign: Int = -1](
         self.setpxpypzm(px, py, pz, m)
 
     fn setptetaphie(
-        inout self,
+        mut self,
         pt: Scalar[dtype],
         eta: Scalar[dtype],
         phi: Scalar[dtype],
@@ -639,67 +702,138 @@ struct LorentzVector[dtype: DType = DType.float64, sign: Int = -1](
         var pz = pt * sinh(eta)
         self.setpxpypze(px, py, pz, e)
 
-    fn tolist(inout self) -> List[Scalar[dtype]]:
+    fn tolist(mut self) -> List[Scalar[dtype]]:
         return List[Scalar[dtype]](
-            self.data[0], self.data[1], self.data[2], self.data[3]
+            self._buf[0], self._buf[1], self._buf[2], self._buf[3]
         )
 
-    fn p(inout self) -> Scalar[dtype]:
+    fn vector(self) -> Vector3D[dtype]:
+        return Vector3D[dtype](x=self._buf[0], y=self._buf[1], z=self._buf[2])
+
+    fn mag(self) -> Scalar[dtype]:
+        return sqrt(
+            self._buf[3]**2 - (self._buf.load[width=2](0) ** 2).reduce_add() - self._buf.load(2)**2
+        )
+
+    fn mag2(self) -> Scalar[dtype]:
+        return sqrt(
+            self._buf[3]**2 - (self._buf.load[width=2](0) ** 2).reduce_add() - self._buf.load(2)**2
+        )
+
+    fn costheta(mut self) -> Scalar[dtype]:
+        if self.mag() == 0.0:
+            return 1.0
+        else:
+            return self._buf[2] / self.mag()
+
+    fn theta(mut self, degree: Bool = False) -> Scalar[dtype]:
+        var theta = acos(self.costheta())
+        if degree == True:
+            return theta * 180.0 / pi.cast[dtype]()
+        else:
+            return theta
+
+    fn phi(mut self, degree: Bool = False) -> Scalar[dtype]:
+        var phi = atan2(self._buf[1], self._buf[0])
+        if degree == True:
+            return phi * 180.0 / pi.cast[dtype]()
+        else:
+            return phi
+
+    fn px(self) -> Scalar[dtype]:
+        return self._buf[0]
+
+    fn px(mut self, px: Scalar[dtype]):
+        self._buf[0] = px
+
+    fn py(self) -> Scalar[dtype]:
+        return self._buf[1]
+
+    fn py(mut self, py: Scalar[dtype]):
+        self._buf[1] = py
+
+    fn pz(self) -> Scalar[dtype]:
+        return self._buf[2]
+
+    fn pz(mut self, pz: Scalar[dtype]):
+        self._buf[2] = pz
+
+    fn e(self) -> Scalar[dtype]:
+        return self._buf[3]
+
+    fn e(mut self, e: Scalar[dtype]):
+        self._buf[3] = e
+
+    fn m(self) -> Scalar[dtype]:
         return self.mag()
 
-    fn perp(inout self) -> Scalar[dtype]:
-        return sqrt(self.data[0] ** 2 + self.data[1] ** 2)
+    fn m2(self) -> Scalar[dtype]:
+        return self.mag2()
 
-    fn pt(inout self) -> Scalar[dtype]:
+    fn mass(self) -> Scalar[dtype]:
+        return self.mag()
+
+    fn mass2(self) -> Scalar[dtype]:
+        return self.mag2()
+
+    fn p(mut self) -> Scalar[dtype]:
+        return self.mag()
+
+    fn perp(mut self) -> Scalar[dtype]:
+        return sqrt(self._buf[0] ** 2 + self._buf[1] ** 2)
+
+    fn pt(mut self) -> Scalar[dtype]:
         return self.perp()
 
-    fn et(inout self) -> Scalar[dtype]:
+    fn et(mut self) -> Scalar[dtype]:
         return self.e() * (self.pt() / self.p())
 
-    fn minv(inout self) -> Scalar[dtype]:
-        return self.magl()
-
-    fn mt(inout self) -> Scalar[dtype]:
+    fn mt(mut self) -> Scalar[dtype]:
         return sqrt(self.mt2())
 
-    fn mt2(inout self) -> Scalar[dtype]:
+    fn mt2(mut self) -> Scalar[dtype]:
         return self.e() ** 2 - self.pz() ** 2
 
-    fn beta(inout self) -> Scalar[dtype]:
+    fn beta(mut self) -> Scalar[dtype]:
         return self.p() / self.e()
 
-    fn gamma(inout self) -> Scalar[dtype]:
+    fn gamma(mut self) -> Scalar[dtype]:
         if self.beta() < 1:
             return 1.0 / sqrt(1.0 - self.beta() ** 2)
         else:
             print("Gamma > 1.0, Returning 10e10")
             return 10e10
 
-    fn eta(inout self) -> Scalar[dtype]:
+    fn eta(mut self) -> Scalar[dtype]:
         if abs(self.costheta()) < 1.0:
             return -0.5 * log((1.0 - self.costheta()) / (1.0 + self.costheta()))
         else:
             print("eta > 1.0, Returning 10e10")
-            return 10e10 if self.z() > 0 else -10e10
+            return Scalar[dtype](10e10) if self.z() > 0 else -Scalar[dtype](
+                10e10
+            )
 
-    fn pseudorapidity(inout self) -> Scalar[dtype]:
+    fn pseudorapidity(mut self) -> Scalar[dtype]:
         return self.eta()
 
-    fn rapidity(inout self) -> Scalar[dtype]:
+    fn rapidity(mut self) -> Scalar[dtype]:
         return 0.5 * log((self.e() + self.pz()) / (self.e() - self.pz()))
 
-    fn copy(inout self) raises -> Self:
-        return Self(self.data[0], self.data[1], self.data[2], self.data[3])
+    fn copy(mut self) raises -> Self:
+        return Self(self._buf[0], self._buf[1], self._buf[2], self._buf[3])
 
-    # Implement iter
-    fn boostvector(inout self) -> Vector3D[dtype]:
+    fn boostvector(self) raises -> Vector3D[dtype]:
         return Vector3D(
-            self.x() / self.t(), self.y() / self.t(), self.z() / self.t()
+            self._buf[0] / self._buf[3],
+            self._buf[1] / self._buf[3],
+            self._buf[2] / self._buf[3],
         )
 
-    fn boost(inout self, inout args: Vector3D[dtype]) raises -> Self:
+    fn boost(self, mut args: Vector3D[dtype]) raises -> Self:
         if len(args) != 3:
-            print("Error, it is not a valid vector size")
+            raise Error(
+                "Boost vector must be an instance of Vector3D of size 3."
+            )
 
         var bx: Scalar[dtype] = args[0]
         var by: Scalar[dtype] = args[1]
@@ -725,9 +859,11 @@ struct LorentzVector[dtype: DType = DType.float64, sign: Int = -1](
 
         return Self(xp, yp, zp, tp)
 
-    fn boostplus(inout self, inout args: Vector3D[dtype]) raises -> Self:
+    fn boostplus(self, mut args: Vector3D[dtype]) raises -> Self:
         if len(args) != 3:
-            print("Error, it is not a valid vector size")
+            raise Error(
+                "Boost vector must be an instance of Vector3D of size 3."
+            )
 
         var bx: Scalar[dtype] = args[0]
         var by: Scalar[dtype] = args[1]
@@ -753,9 +889,11 @@ struct LorentzVector[dtype: DType = DType.float64, sign: Int = -1](
 
         return Self(xp, yp, zp, tp)
 
-    fn boostminus(inout self, inout args: Vector3D[dtype]) raises -> Self:
+    fn boostminus(self, mut args: Vector3D[dtype]) raises -> Self:
         if len(args) != 3:
-            print("Error, it is not a valid vector size")
+            raise Error(
+                "Boost vector must be an instance of Vector3D of size 3."
+            )
 
         var bx: Scalar[dtype] = -1.0 * args[0]
         var by: Scalar[dtype] = -1.0 * args[1]
@@ -782,57 +920,83 @@ struct LorentzVector[dtype: DType = DType.float64, sign: Int = -1](
         return Self(xp, yp, zp, tp)
 
     # maybe you can change this implementation
-    fn dot(inout self, other: Self) raises -> Scalar[dtype]:
-        if sign == -1:
-            var metric = LorentzVector[dtype, sign](-1, 1, 1, 1)
-            return (self * (other * metric))._reduce_sum()
-            # return - self.t() * other.t() + self.vector().dot(other.vector())
-        else:
-            var metric = LorentzVector[dtype, sign](1, -1, -1, -1)
-            return (self * (other * metric))._reduce_sum()
-            # return self.t() * other.t() - self.vector().dot(other.vector())
+    fn dot(mut self, other: Self) raises -> Scalar[dtype]:
+        return self @ other
 
-    fn _reduce_sum(self) -> Scalar[dtype]:    
-       """
-        Computes the sum of all elements in the vector using SIMD operations for efficiency.
-
-        This function performs a reduction operation to sum all elements of the vector. It leverages SIMD capabilities to load and add multiple elements simultaneously, which can significantly speed up the operation on large vectors. The result is a scalar value representing the sum of all elements.
-
-        Returns:
-            A scalar of type `dtype` representing the sum of all elements in the vector.
-        """
-        var reduced: Scalar[dtype] = Scalar[dtype](0)
-        alias simd_width: Int = simdwidthof[dtype]()
-
-        @parameter
-        fn vectorize_reduce[simd_width: Int](idx: Int) -> None:
-            reduced += self.data.load[width=simd_width](idx).reduce_add()
-
-        vectorize[vectorize_reduce, simd_width](self.size)
-        return reduced
-
-
-    fn isspacelike(inout self) raises -> Bool:
-        if self.magl2() != 0.0:
-            if sign == -1:
-                return self.magl2() > 0.0
-            else:
-                return self.magl2() < 0.0
+    fn isspacelike(mut self) raises -> Bool:
+        if self.mag() != 0.0:
+            return self.mag2() < 0.0
         else:
             raise Error("Magnitude is zero")
 
-    fn istimelike(inout self) raises -> Bool:
-        if self.magl2() != 0.0:
-            if sign == -1:
-                return self.magl2() < 0.0
-            else:
-                return self.magl2() > 0.0
+    fn istimelike(mut self) raises -> Bool:
+        if self.mag() != 0.0:
+            return self.mag2() > 0.0
         else:
             raise Error("Magnitude is zero")
 
-    fn islightlike(inout self) -> Bool:
-        return self.magl2() == 0.0
+    fn islightlike(mut self) -> Bool:
+        return self.mag2() == 0.0
 
-    fn torestframe(inout self) raises -> Self:
-        var boost_vec = self.boostvector()
+    fn torestframe(self) raises -> Self:
+        var boost_vec: Vector3D[dtype] = self.boostvector()
         return self.boostplus(boost_vec)
+
+
+@value
+struct _lorentzvectorIter[
+    is_mutable: Bool, //,
+    lifetime: Origin[is_mutable],
+    dtype: DType,
+    forward: Bool = True,
+]:
+    """Iterator for LorentzVector.
+
+    Parameters:
+        is_mutable: Whether the iterator is mutable.
+        lifetime: The lifetime of the underlying NDArray data.
+        dtype: The data type of the item.
+        forward: The iteration direction. `False` is backwards.
+    """
+
+    var index: Int
+    var array: LorentzVector[dtype]
+    var length: Int
+
+    fn __init__(
+        mut self,
+        array: LorentzVector[dtype],
+        length: Int,
+    ):
+        self.index = 0 if forward else length
+        self.length = length
+        self.array = array
+
+    fn __iter__(self) -> Self:
+        return self
+
+    fn __next__(mut self) raises -> Scalar[dtype]:
+        @parameter
+        if forward:
+            var current_index = self.index
+            self.index += 1
+            return self.array.__getitem__(current_index)
+        else:
+            var current_index = self.index
+            self.index -= 1
+            return self.array.__getitem__(current_index)
+
+    @always_inline
+    fn __has_next__(self) -> Bool:
+        @parameter
+        if forward:
+            return self.index < self.length
+        else:
+            return self.index > 0
+
+    fn __len__(self) -> Int:
+        @parameter
+        if forward:
+            return self.length - self.index
+        else:
+            return self.index
