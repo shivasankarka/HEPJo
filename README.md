@@ -41,12 +41,6 @@
 
 HEPJo is a high-performance library for numerical computations in particle physics, written in Mojo. Inspired by [Scikit-HEP](https://scikit-hep.org), it aims to provide fast and efficient implementations of common particle physics operations. The library currently includes implementations of LorentzVector, Vector3D, and Vector2D classes with plans to expand further.
 
-## Installation
-
-1. Clone the repository.
-2. Build the package using `mojo package hepjo`
-3. Move the hepjo.mojopkg into the directory containing the your code.
-
 ## Features
 
 - **High Performance**: Written in Mojo for maximum speed and efficiency
@@ -57,7 +51,7 @@ HEPJo is a high-performance library for numerical computations in particle physi
 
 ## Quick Start
 
-HEPJo is currently under development and does not yet have comprehensive documentation. Please refer to the tests and example code to explore the full range of functionalities available.
+HEPJo is currently under development and does not yet have comprehensive documentation. Please refer to the docstrings and [example code](https://github.com/shivasankarka/HEPJo/blob/main/docs/doc.mojo) to explore the full range of functionalities available.
 
 ```mojo
 import hepjo as hj
@@ -76,6 +70,66 @@ var restframe_lvec = lvec.torestframe()  # Transform to rest frame
 var lvec1 = LorentzVector.setpxpypzm(3.0, 4.0, 5.0, 10.0)
 var boosted_lvec = lvec.boost(lvec1.boostvector())  # Apply boost transformation
 ```
+
+## Installation
+
+### Method 1: Git Installation with pixi-build-mojo  (Recommended)
+
+Install HepJo directly from the GitHub repository to access both stable releases and cutting-edge features. This method is perfect for developers who want the latest functionality or need to work with the most recent stable version.
+
+Add the following to your existing `pixi.toml`:
+
+```toml
+[workspace]
+preview = ["pixi-build"]
+
+[package]
+name = "your_project_name"
+version = "0.1.0"
+
+[package.build]
+backend = {name = "pixi-build-mojo", version = "0.*"}
+
+[package.build.config.pkg]
+name = "your_package_name"
+
+[package.host-dependencies]
+modular = ">=26.1.0.dev2026010305,<27"
+
+[package.build-dependencies]
+modular = ">=26.1.0.dev2026010305,<27"
+numojo = { git = "https://github.com/shivasankarka/HEPJo", branch = "main"}
+
+[package.run-dependencies]
+modular = ">=26.1.0.dev2026010305,<27"
+numojo = { git = "https://github.com/shivasankarka/HEPJo", branch = "main"}
+
+[dependencies]
+modular = ">=26.1.0.dev2026010305,<27"
+numojo = { git = "https://github.com/shivasankarka/HEPJo", branch = "main"}
+```
+
+Then run:
+```bash
+pixi install
+```
+
+### Method 2: Build Standalone Package
+
+This method creates a portable `hepjo.mojopkg` file that you can use across multiple projects, perfect for offline development or hermetic builds.
+
+1. Clone the repository:
+   ```bash
+   git clone "https://github.com/shivasankarka/HEPJo"
+   cd HepJo
+   ```
+
+2. Build the package:
+   ```bash
+   pixi run package
+   ```
+
+3. Copy `hepjo.mojopkg` to your project directory or add its parent directory to your include paths.
 
 ## API Reference
 
