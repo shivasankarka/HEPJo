@@ -418,6 +418,15 @@ struct Vector2D[dtype: DType = DType.float64](
 
     # * since "*" already does element wise calculation, I think matmul is redundant for 1D array, but I could use it for dot products
     fn __matmul__(mut self, other: Self) -> Scalar[Self.dtype]:
+        """
+        Computes the dot product using the @ operator.
+
+        Args:
+            other: The other vector to dot with.
+
+        Returns:
+            The scalar dot product of the two vectors.
+        """
         return self.dot(other)
 
     fn distance(self, other: Self) -> Scalar[Self.dtype]:
@@ -435,20 +444,61 @@ struct Vector2D[dtype: DType = DType.float64](
     # * STATIC METHODS
     @staticmethod
     fn origin() -> Self:
+        """
+        Creates a Vector2D at the origin (0, 0).
+
+        Returns:
+            A Vector2D with both components set to 0.
+        """
         return Self(0.0, 0.0)
 
     @staticmethod
     fn frompoint(x: Scalar[Self.dtype], y: Scalar[Self.dtype]) -> Self:
+        """
+        Creates a Vector2D from Cartesian coordinates.
+
+        Args:
+            x: The x-coordinate.
+            y: The y-coordinate.
+
+        Returns:
+            A Vector2D with the specified Cartesian coordinates.
+        """
         return Self(x, y)
 
     @staticmethod
     fn fromvector(v: Self) raises -> Self:
+        """
+        Creates a Vector2D from another Vector2D.
+
+        Args:
+            v: The Vector2D to copy from.
+
+        Returns:
+            A new Vector2D with the same components.
+
+        Raises:
+            Error: If the vector size is not 2.
+        """
         return Self(v[0], v[1])
 
     @staticmethod
     fn fromsphericalcoords(
         r: Scalar[Self.dtype], phi: Scalar[Self.dtype]
     ) -> Self:
+        """
+        Creates a Vector2D from spherical coordinates.
+
+        Args:
+            r: The radial distance (magnitude).
+            phi: The azimuthal angle in radians.
+
+        Returns:
+            A Vector2D constructed from the spherical coordinates (r, phi).
+
+        Notes:
+            Spherical coordinates are converted to Cartesian as: x = r*cos(phi), y = r*sin(phi).
+        """
         var x: Scalar[Self.dtype] = r * cos(phi)
         var y: Scalar[Self.dtype] = r * sin(phi)
         return Self(x, y)
@@ -457,12 +507,37 @@ struct Vector2D[dtype: DType = DType.float64](
     fn fromcylindricalcoodinates(
         rho: Scalar[Self.dtype], phi: Scalar[Self.dtype]
     ) -> Self:
+        """
+        Creates a Vector2D from cylindrical coordinates.
+
+        Args:
+            rho: The radial distance in the xy-plane.
+            phi: The azimuthal angle in radians.
+
+        Returns:
+            A Vector2D constructed from the cylindrical coordinates (rho, phi).
+
+        Notes:
+            Cylindrical coordinates are converted to Cartesian as: x = rho*cos(phi), y = rho*sin(phi).
+        """
         var x: Scalar[Self.dtype] = rho * cos(phi)
         var y: Scalar[Self.dtype] = rho * sin(phi)
         return Self(x, y)
 
     @staticmethod
     fn fromlist(iterable: List[Scalar[Self.dtype]]) raises -> Self:
+        """
+        Creates a Vector2D from a list of scalar values.
+
+        Args:
+            iterable: A list containing exactly 2 scalar elements [x, y].
+
+        Returns:
+            A Vector2D with components from the provided list.
+
+        Raises:
+            Error: If the list length is not exactly 2.
+        """
         if len(iterable) == 2:
             return Self(iterable[0], iterable[1])
         else:

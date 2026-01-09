@@ -553,16 +553,43 @@ struct LorentzVector[dtype: DType = DType.float64](
     # * STATIC METHODS
     @staticmethod
     fn origin() -> Self:
+        """
+        Creates a LorentzVector at the origin (0, 0, 0, 0).
+
+        Returns:
+            A LorentzVector with all components set to 0.
+        """
         return Self(0.0, 0.0, 0.0, 0.0)
 
     @staticmethod
     fn frompoint(
         x: Scalar[Self.dtype], y: Scalar[Self.dtype], z: Scalar[Self.dtype], t: Scalar[Self.dtype]
     ) -> Self:
+        """
+        Creates a LorentzVector from Cartesian coordinates.
+
+        Args:
+            x: The x-component (spatial).
+            y: The y-component (spatial).
+            z: The z-component (spatial).
+            t: The t-component (temporal/energy).
+
+        Returns:
+            A LorentzVector with the specified components.
+        """
         return Self(x=x, y=y, z=z, t=t)
 
     @staticmethod
     fn fromvector(v: Self) raises -> Self:
+        """
+        Creates a LorentzVector from another LorentzVector.
+
+        Args:
+            v: The LorentzVector to copy from.
+
+        Returns:
+            A new LorentzVector with the same components.
+        """
         return Self(v._x, v._y, v._z, v._t)
 
     @staticmethod
@@ -572,6 +599,22 @@ struct LorentzVector[dtype: DType = DType.float64](
         phi: Scalar[Self.dtype],
         t: Scalar[Self.dtype],
     ) -> Self:
+        """
+        Creates a LorentzVector from spherical coordinates.
+
+        Args:
+            r: Radial distance from origin.
+            theta: Polar angle measured from the positive z-axis.
+            phi: Azimuthal angle in the xy-plane from the positive x-axis.
+            t: The t-component (temporal/energy).
+
+        Returns:
+            A LorentzVector constructed from the spherical coordinates.
+
+        Notes:
+            Spherical coordinates are converted to Cartesian as:
+            x = r*sin(theta)*cos(phi), y = r*sin(theta)*sin(phi), z = r*cos(theta).
+        """
         var x: Scalar[Self.dtype] = r * sin(theta) * cos(phi)
         var y: Scalar[Self.dtype] = r * sin(theta) * sin(phi)
         var z: Scalar[Self.dtype] = r * cos(theta)
@@ -581,12 +624,39 @@ struct LorentzVector[dtype: DType = DType.float64](
     fn fromcylindricalcoodinates(
         rho: Scalar[Self.dtype], phi: Scalar[Self.dtype], z: Scalar[Self.dtype], t: Scalar[Self.dtype]
     ) -> Self:
+        """
+        Creates a LorentzVector from cylindrical coordinates.
+
+        Args:
+            rho: Radial distance in the xy-plane.
+            phi: Azimuthal angle in the xy-plane from the positive x-axis.
+            z: The z-component (spatial).
+            t: The t-component (temporal/energy).
+
+        Returns:
+            A LorentzVector constructed from the cylindrical coordinates.
+
+        Notes:
+            Cylindrical coordinates are converted to Cartesian as: x = rho*cos(phi), y = rho*sin(phi).
+        """
         var x: Scalar[Self.dtype] = rho * cos(phi)
         var y: Scalar[Self.dtype] = rho * sin(phi)
         return Self(x, y, z, t)
 
     @staticmethod
     fn fromlist(iterable: List[Scalar[Self.dtype]]) raises -> Self:
+        """
+        Creates a LorentzVector from a list of scalar values.
+
+        Args:
+            iterable: A list containing exactly 4 scalar elements [x, y, z, t].
+
+        Returns:
+            A LorentzVector with components from the provided list.
+
+        Raises:
+            Error: If the list length is not exactly 4.
+        """
         if len(iterable) == 4:
             return Self(iterable[0], iterable[1], iterable[2], iterable[3])
         else:
@@ -685,7 +755,17 @@ struct LorentzVector[dtype: DType = DType.float64](
         m: Scalar[Self.dtype],
     ):
         """
-        Set (px, py, pz, mass) and compute energy accordingly.
+        Sets the momentum components and mass, computing energy from the invariant mass.
+
+        Args:
+            px: The x-component of momentum.
+            py: The y-component of momentum.
+            pz: The z-component of momentum.
+            m: The invariant mass (can be positive or negative for spacelike vectors).
+
+        Notes:
+            Energy is computed as E = sqrt(p^2 + m^2) where p^2 = px^2 + py^2 + pz^2.
+            For negative mass-squared (spacelike), uses E = sqrt(p^2 - |m^2|).
         """
         self._x = px
         self._y = py
@@ -703,6 +783,15 @@ struct LorentzVector[dtype: DType = DType.float64](
         pz: Scalar[Self.dtype],
         e: Scalar[Self.dtype],
     ):
+        """
+        Sets the momentum components and energy directly.
+
+        Args:
+            px: The x-component of momentum.
+            py: The y-component of momentum.
+            pz: The z-component of momentum.
+            e: The energy component.
+        """
         self.set(px, py, pz, e)
 
     fn setptetaphim(
@@ -712,6 +801,19 @@ struct LorentzVector[dtype: DType = DType.float64](
         phi: Scalar[Self.dtype],
         m: Scalar[Self.dtype],
     ):
+        """
+        Sets the LorentzVector using transverse momentum, pseudorapidity, azimuthal angle, and mass.
+
+        Args:
+            pt: Transverse momentum (magnitude in the xy-plane).
+            eta: Pseudorapidity (related to polar angle theta).
+            phi: Azimuthal angle in radians.
+            m: Invariant mass.
+
+        Notes:
+            Pseudorapidity eta is related to theta by: eta = -ln(tan(theta/2)).
+            Converts to Cartesian coordinates: px = pt*cos(phi), py = pt*sin(phi), pz = pt*sinh(eta).
+        """
         var px = pt * cos(phi)
         var py = pt * sin(phi)
         var pz = pt * sinh(eta)
@@ -724,6 +826,18 @@ struct LorentzVector[dtype: DType = DType.float64](
         phi: Scalar[Self.dtype],
         e: Scalar[Self.dtype],
     ):
+        """
+        Sets the LorentzVector using transverse momentum, pseudorapidity, azimuthal angle, and energy.
+
+        Args:
+            pt: Transverse momentum (magnitude in the xy-plane).
+            eta: Pseudorapidity (related to polar angle theta).
+            phi: Azimuthal angle in radians.
+            e: The energy component.
+
+        Notes:
+            Converts to Cartesian coordinates: px = pt*cos(phi), py = pt*sin(phi), pz = pt*sinh(eta).
+        """
         var px = pt * cos(phi)
         var py = pt * sin(phi)
         var pz = pt * sinh(eta)
@@ -759,12 +873,27 @@ struct LorentzVector[dtype: DType = DType.float64](
         return self._t**2 - (self._x**2 + self._y**2 + self._z**2)
 
     fn costheta(mut self) -> Scalar[Self.dtype]:
+        """
+        Computes the cosine of the polar angle theta from the z-axis.
+
+        Returns:
+            The cosine of angle theta. Returns 1.0 if the magnitude is zero.
+        """
         if self.mag() == 0.0:
             return 1.0
         else:
             return self._z / self.mag()
 
     fn theta(mut self, degree: Bool = False) -> Scalar[Self.dtype]:
+        """
+        Computes the polar angle theta from the positive z-axis.
+
+        Args:
+            degree: If True, returns the angle in degrees, otherwise in radians.
+
+        Returns:
+            The angle theta in the specified unit.
+        """
         var theta = acos(self.costheta())
         if degree == True:
             return theta * 180.0 / pi.cast[Self.dtype]()
@@ -772,6 +901,15 @@ struct LorentzVector[dtype: DType = DType.float64](
             return theta
 
     fn phi(mut self, degree: Bool = False) -> Scalar[Self.dtype]:
+        """
+        Computes the azimuthal angle phi in the xy-plane from the positive x-axis.
+
+        Args:
+            degree: If True, returns the angle in degrees, otherwise in radians.
+
+        Returns:
+            The angle phi in the specified unit.
+        """
         var phi = atan2(self._y, self._x)
         if degree == True:
             return phi * 180.0 / pi.cast[Self.dtype]()
@@ -779,33 +917,93 @@ struct LorentzVector[dtype: DType = DType.float64](
             return phi
 
     fn px(self) -> Scalar[Self.dtype]:
+        """
+        Returns the x-component of momentum.
+
+        Returns:
+            The px value.
+        """
         return self._x
 
     fn px(mut self, px: Scalar[Self.dtype]):
+        """
+        Sets the x-component of momentum.
+
+        Args:
+            px: The new value for px.
+        """
         self._x = px
 
     fn py(self) -> Scalar[Self.dtype]:
+        """
+        Returns the y-component of momentum.
+
+        Returns:
+            The py value.
+        """
         return self._y
 
     fn py(mut self, py: Scalar[Self.dtype]):
+        """
+        Sets the y-component of momentum.
+
+        Args:
+            py: The new value for py.
+        """
         self._y = py
 
     fn pz(self) -> Scalar[Self.dtype]:
+        """
+        Returns the z-component of momentum.
+
+        Returns:
+            The pz value.
+        """
         return self._z
 
     fn pz(mut self, pz: Scalar[Self.dtype]):
+        """
+        Sets the z-component of momentum.
+
+        Args:
+            pz: The new value for pz.
+        """
         self._z = pz
 
     fn e(self) -> Scalar[Self.dtype]:
+        """
+        Returns the energy component.
+
+        Returns:
+            The energy (t-component).
+        """
         return self._t
 
     fn e(mut self, e: Scalar[Self.dtype]):
+        """
+        Sets the energy component.
+
+        Args:
+            e: The new value for energy.
+        """
         self._t = e
 
     fn m(self) -> Scalar[Self.dtype]:
+        """
+        Returns the invariant mass.
+
+        Returns:
+            The invariant mass computed from the 4-vector.
+        """
         return self.mag()
 
     fn m2(self) -> Scalar[Self.dtype]:
+        """
+        Returns the squared invariant mass.
+
+        Returns:
+            The squared invariant mass (m^2 = E^2 - p^2).
+        """
         return self.mag2()
 
     fn mass(self) -> Scalar[Self.dtype]:
@@ -861,6 +1059,12 @@ struct LorentzVector[dtype: DType = DType.float64](
         return Self(self._x, self._y, self._z, self._t)
 
     fn boostvector(self) raises -> Vector3D[Self.dtype]:
+        """
+        Computes the boost vector (beta = p/E) needed to boost to the rest frame.
+
+        Returns:
+            A Vector3D representing the normalized momentum divided by energy.
+        """
         return Vector3D[Self.dtype](
             self._x / self._t,
             self._y / self._t,
@@ -868,6 +1072,18 @@ struct LorentzVector[dtype: DType = DType.float64](
         )
 
     fn boost(self, args: Vector3D[Self.dtype]) raises -> Self:
+        """
+        Applies a Lorentz boost to this LorentzVector.
+
+        Args:
+            args: A Vector3D representing the boost velocity (beta = v/c).
+
+        Returns:
+            A new LorentzVector after applying the boost transformation.
+
+        Notes:
+            Uses the standard Lorentz boost formula with gamma = 1/sqrt(1 - beta^2).
+        """
         if len(args) != 3:
             raise Error("Boost vector must be an instance of Vector3D of size 3.")
 
@@ -896,33 +1112,93 @@ struct LorentzVector[dtype: DType = DType.float64](
         return Self(xp, yp, zp, tp)
 
     fn boostplus(self, args: Vector3D[Self.dtype]) raises -> Self:
+        """
+        Applies a forward Lorentz boost (equivalent to boost method).
+
+        Args:
+            args: A Vector3D representing the boost velocity.
+
+        Returns:
+            A new LorentzVector after applying the boost.
+        """
         return self.boost(args)
 
     fn boostminus(self, args: Vector3D[Self.dtype]) raises -> Self:
+        """
+        Applies a reverse Lorentz boost (negative of the provided boost vector).
+
+        Args:
+            args: A Vector3D representing the boost velocity to reverse.
+
+        Returns:
+            A new LorentzVector after applying the inverse boost.
+        """
         var bx: Scalar[Self.dtype] = -1.0 * args[0]
         var by: Scalar[Self.dtype] = -1.0 * args[1]
         var bz: Scalar[Self.dtype] = -1.0 * args[2]
         return self.boost(Vector3D[Self.dtype](bx, by, bz))
 
     fn dot(mut self, other: Self) raises -> Scalar[Self.dtype]:
+        """
+        Computes the Lorentz invariant dot product with another LorentzVector.
+
+        Args:
+            other: The other LorentzVector to dot with.
+
+        Returns:
+            The scalar Lorentz dot product (E1*E2 - p1·p2).
+        """
         return self @ other
 
     fn isspacelike(mut self) raises -> Bool:
+        """
+        Determines if this LorentzVector is spacelike.
+
+        Returns:
+            True if the invariant mass-squared is negative (spacelike separation).
+
+        Raises:
+            Error: If the magnitude is zero.
+        """
         if self.mag() != 0.0:
             return self.mag2() < 0.0
         else:
             raise Error("Magnitude is zero")
 
     fn istimelike(mut self) raises -> Bool:
+        """
+        Determines if this LorentzVector is timelike.
+
+        Returns:
+            True if the invariant mass-squared is positive (timelike separation).
+
+        Raises:
+            Error: If the magnitude is zero.
+        """
         if self.mag() != 0.0:
             return self.mag2() > 0.0
         else:
             raise Error("Magnitude is zero")
 
     fn islightlike(mut self) -> Bool:
+        """
+        Determines if this LorentzVector is lightlike (null).
+
+        Returns:
+            True if the invariant mass-squared is exactly zero (lightlike/null).
+        """
         return self.mag2() == 0.0
 
     fn torestframe(self) raises -> Self:
+        """
+        Boosts this LorentzVector to its rest frame.
+
+        Returns:
+            A new LorentzVector boosted to the rest frame where the spatial momentum is zero.
+
+        Notes:
+            The rest frame has energy equal to the invariant mass and zero spatial momentum.
+        """
         var boost_vec: Vector3D[Self.dtype] = self.boostvector()
         return self.boostplus(boost_vec)
 

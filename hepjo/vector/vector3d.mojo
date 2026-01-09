@@ -108,6 +108,21 @@ struct Vector3D[dtype: DType = DType.float64](
             return self._z
 
     fn __getattr__[name: StringLiteral](self) raises -> Scalar[Self.dtype]:
+        """
+        Gets vector attributes by name (x, y, z, r, rho, theta, phi).
+
+        This method supports accessing vector components and computed properties via attribute syntax.
+
+        Returns:
+            The scalar value of the requested attribute.
+
+        Raises:
+            Error: If the attribute name is not recognized.
+
+        Notes:
+            Supported attribute names: x, y, z (Cartesian), r (magnitude),
+            rho (cylindrical radial), theta and phi (spherical angles).
+        """
         if name == "x":
             return self._x
         elif name == "y":
@@ -158,6 +173,12 @@ struct Vector3D[dtype: DType = DType.float64](
 
     # TODO: remove string allocs by writing to writer directly.
     fn write_to[W: Writer](self, mut writer: W):
+        """
+        Writes the Vector3D to a writer in a formatted string representation.
+
+        Args:
+            writer: The writer object to write to.
+        """
         try:
             var printStr: String = "Vector3D: ["
             for i in range(self.size - 1):
@@ -177,7 +198,12 @@ struct Vector3D[dtype: DType = DType.float64](
         print()
 
     fn __repr__(self) -> String:
-        """Compute the "official" string representation of Vector3D."""
+        """
+        Computes the "official" string representation of Vector3D.
+
+        Returns:
+            A string representation of the Vector3D with all components and dtype.
+        """
         return (
             "Vector3D[DType."
             + String(Self.dtype)
@@ -191,14 +217,20 @@ struct Vector3D[dtype: DType = DType.float64](
         )
 
     fn __len__(self) -> Int:
-        """Returns the length of the Vector3D (=3)."""
+        """
+        Returns the length of the Vector3D.
+
+        Returns:
+            The size of the vector (3).
+        """
         return self.size - 1
 
     fn __iter__(self) raises -> _vector3DIter[origin_of(self), Self.dtype]:
-        """Iterate over elements of the Vector3D, returning copied value.
+        """
+        Creates an iterator over elements of the Vector3D.
 
         Returns:
-            An iterator of Vector3D elements.
+            An iterator of Vector3D elements, returning copied values.
 
         Notes:
             Need to add lifetimes after the new release.
@@ -212,11 +244,11 @@ struct Vector3D[dtype: DType = DType.float64](
     fn __reversed__(
         self,
     ) raises -> _vector3DIter[origin_of(self), Self.dtype, forward=False]:
-        """Iterate backwards over elements of the Vector3D, returning
-        copied value.
+        """
+        Creates a reversed iterator over elements of the Vector3D.
 
         Returns:
-            A reversed iterator of Vector3D elements.
+            A reversed iterator of Vector3D elements, returning copied values.
         """
 
         return _vector3DIter[origin_of(self), Self.dtype, forward=False](
@@ -225,16 +257,34 @@ struct Vector3D[dtype: DType = DType.float64](
         )
 
     fn typeof(mut self) -> DType:
+        """
+        Returns the data type of the vector's components.
+
+        Returns:
+            The DType of the vector.
+        """
         return Self.dtype
 
     fn typeof_str(mut self) -> String:
+        """
+        Returns the string representation of the vector's data type.
+
+        Returns:
+            A string describing the DType of the vector.
+        """
         return Self.dtype.__str__()
 
     # """COMPARISONS"""
     @always_inline("nodebug")
     fn __eq__(self, other: Self) raises -> Vector3D[DType.bool]:
         """
-        Itemwise equivalence.
+        Component-wise equality comparison.
+
+        Args:
+            other: The other Vector3D to compare with.
+
+        Returns:
+            A Vector3D[DType.bool] with element-wise equality results.
         """
         return Vector3D[DType.bool](
             self._x == other._x, self._y == other._y, self._z == other._z
@@ -245,14 +295,23 @@ struct Vector3D[dtype: DType = DType.float64](
         self,
     ) raises -> Vector3D[DType.bool] where Self.dtype == DType.bool:
         """
-        Itemwise logical NOT.
+        Itemwise logical NOT (for boolean vectors).
+
+        Returns:
+            A new Vector3D[DType.bool] with inverted (negated) boolean values.
         """
         return Vector3D[DType.bool](not self._x, not self._y, not self._z)
 
     @always_inline("nodebug")
     fn __eq__(self, other: Scalar[Self.dtype]) raises -> Vector3D[DType.bool]:
         """
-        Itemwise equivalence between scalar and Array.
+        Component-wise equality comparison with a scalar.
+
+        Args:
+            other: The scalar value to compare with.
+
+        Returns:
+            A Vector3D[DType.bool] with element-wise equality results.
         """
         return Vector3D[DType.bool](
             self._x == other, self._y == other, self._z == other
@@ -261,21 +320,39 @@ struct Vector3D[dtype: DType = DType.float64](
     @always_inline("nodebug")
     fn __ne__(self, other: Vector3D[Self.dtype]) raises -> Vector3D[DType.bool]:
         """
-        Itemwise nonequivelence between scalar and Array.
+        Component-wise inequality comparison.
+
+        Args:
+            other: The other Vector3D to compare with.
+
+        Returns:
+            A Vector3D[DType.bool] with element-wise inequality results.
         """
         return ~self.__eq__(other)
 
     @always_inline("nodebug")
     fn __ne__(self, other: Scalar[Self.dtype]) raises -> Vector3D[DType.bool]:
         """
-        Itemwise nonequivelence.
+        Component-wise inequality comparison with a scalar.
+
+        Args:
+            other: The scalar value to compare with.
+
+        Returns:
+            A Vector3D[DType.bool] with element-wise inequality results.
         """
         return ~self.__eq__(other)
 
     @always_inline("nodebug")
     fn __lt__(self, other: Vector3D[Self.dtype]) raises -> Vector3D[DType.bool]:
         """
-        Itemwise less than between scalar and Array.
+        Component-wise less-than comparison.
+
+        Args:
+            other: The other Vector3D to compare with.
+
+        Returns:
+            A Vector3D[DType.bool] with element-wise less-than results.
         """
         return Vector3D[DType.bool](
             self._x < other._x, self._y < other._y, self._z < other._z
@@ -284,7 +361,13 @@ struct Vector3D[dtype: DType = DType.float64](
     @always_inline("nodebug")
     fn __lt__(self, other: Scalar[Self.dtype]) raises -> Vector3D[DType.bool]:
         """
-        Itemwise less than.
+        Component-wise less-than comparison with a scalar.
+
+        Args:
+            other: The scalar value to compare with.
+
+        Returns:
+            A Vector3D[DType.bool] with element-wise less-than results.
         """
         return Vector3D[DType.bool](
             self._x < other, self._y < other, self._z < other
@@ -293,7 +376,13 @@ struct Vector3D[dtype: DType = DType.float64](
     @always_inline("nodebug")
     fn __le__(self, other: Vector3D[Self.dtype]) raises -> Vector3D[DType.bool]:
         """
-        Itemwise less than or equal to between scalar and Array.
+        Component-wise less-than-or-equal comparison.
+
+        Args:
+            other: The other Vector3D to compare with.
+
+        Returns:
+            A Vector3D[DType.bool] with element-wise less-than-or-equal results.
         """
         return Vector3D[DType.bool](
             self._x <= other._x, self._y <= other._y, self._z <= other._z
@@ -302,7 +391,13 @@ struct Vector3D[dtype: DType = DType.float64](
     @always_inline("nodebug")
     fn __le__(self, other: Scalar[Self.dtype]) raises -> Vector3D[DType.bool]:
         """
-        Itemwise less than or equal to.
+        Component-wise less-than-or-equal comparison with a scalar.
+
+        Args:
+            other: The scalar value to compare with.
+
+        Returns:
+            A Vector3D[DType.bool] with element-wise less-than-or-equal results.
         """
         return Vector3D[DType.bool](
             self._x <= other, self._y <= other, self._z <= other
@@ -311,7 +406,13 @@ struct Vector3D[dtype: DType = DType.float64](
     @always_inline("nodebug")
     fn __gt__(self, other: Vector3D[Self.dtype]) raises -> Vector3D[DType.bool]:
         """
-        Itemwise greater than between scalar and Array.
+        Component-wise greater-than comparison.
+
+        Args:
+            other: The other Vector3D to compare with.
+
+        Returns:
+            A Vector3D[DType.bool] with element-wise greater-than results.
         """
         return Vector3D[DType.bool](
             self._x > other._x, self._y > other._y, self._z > other._z
@@ -320,7 +421,13 @@ struct Vector3D[dtype: DType = DType.float64](
     @always_inline("nodebug")
     fn __gt__(self, other: Scalar[Self.dtype]) raises -> Vector3D[DType.bool]:
         """
-        Itemwise greater than.
+        Component-wise greater-than comparison with a scalar.
+
+        Args:
+            other: The scalar value to compare with.
+
+        Returns:
+            A Vector3D[DType.bool] with element-wise greater-than results.
         """
         return Vector3D[DType.bool](
             self._x > other, self._y > other, self._z > other
@@ -329,7 +436,13 @@ struct Vector3D[dtype: DType = DType.float64](
     @always_inline("nodebug")
     fn __ge__(self, other: Vector3D[Self.dtype]) raises -> Vector3D[DType.bool]:
         """
-        Itemwise less than or equal to between scalar and Array.
+        Component-wise greater-than-or-equal comparison.
+
+        Args:
+            other: The other Vector3D to compare with.
+
+        Returns:
+            A Vector3D[DType.bool] with element-wise greater-than-or-equal results.
         """
         return Vector3D[DType.bool](
             self._x >= other._x, self._y >= other._y, self._z >= other._z
@@ -338,7 +451,13 @@ struct Vector3D[dtype: DType = DType.float64](
     @always_inline("nodebug")
     fn __ge__(self, other: Scalar[Self.dtype]) raises -> Vector3D[DType.bool]:
         """
-        Itemwise greater than or equal to.
+        Component-wise greater-than-or-equal comparison with a scalar.
+
+        Args:
+            other: The scalar value to compare with.
+
+        Returns:
+            A Vector3D[DType.bool] with element-wise greater-than-or-equal results.
         """
         return Vector3D[DType.bool](
             self._x >= other, self._y >= other, self._z >= other
@@ -347,13 +466,19 @@ struct Vector3D[dtype: DType = DType.float64](
     # """ARITHMETIC"""
     fn __pos__(self) raises -> Self:
         """
-        Unary positve returens self unless boolean type.
+        Unary positive operator.
+
+        Returns:
+            A copy of the vector (positive operation).
         """
         return self
 
     fn __neg__(self) raises -> Self:
         """
-        Unary negative returens self unless boolean type.
+        Unary negative operator.
+
+        Returns:
+            A new Vector3D with all components negated.
         """
         return self * Scalar[Self.dtype](-1)
 
@@ -390,15 +515,45 @@ struct Vector3D[dtype: DType = DType.float64](
         )
 
     fn __radd__(mut self, other: Scalar[Self.dtype]) -> Self:
+        """
+        Right addition with a scalar (scalar + vector).
+
+        Args:
+            other: Scalar value to add.
+
+        Returns:
+            A new Vector3D with each component increased by `other`.
+        """
         return self + other
 
     fn __radd__(self, other: Self) -> Self:
+        """
+        Right addition with another vector.
+
+        Args:
+            other: The other Vector3D to add.
+
+        Returns:
+            A new Vector3D representing the component-wise sum.
+        """
         return self + other
 
     fn __iadd__(mut self, other: Scalar[Self.dtype]):
+        """
+        In-place addition with a scalar.
+
+        Args:
+            other: Scalar value to add to each component.
+        """
         self = self + other
 
     fn __iadd__(mut self, other: Self):
+        """
+        In-place component-wise addition with another vector.
+
+        Args:
+            other: The other Vector3D to add.
+        """
         self = self + other
 
     fn __sub__(self, other: Scalar[Self.dtype]) -> Self:
@@ -434,15 +589,45 @@ struct Vector3D[dtype: DType = DType.float64](
         )
 
     fn __rsub__(self, other: Scalar[Self.dtype]) raises -> Self:
+        """
+        Right subtraction with a scalar (scalar - vector).
+
+        Args:
+            other: Scalar value to subtract from.
+
+        Returns:
+            A new Vector3D representing the negated difference.
+        """
         return -(self - other)
 
     fn __rsub__(self, other: Self) raises -> Self:
+        """
+        Right subtraction with another vector.
+
+        Args:
+            other: The other Vector3D to subtract from.
+
+        Returns:
+            A new Vector3D representing the negated difference.
+        """
         return -(self - other)
 
     fn __isub__(mut self, other: Scalar[Self.dtype]):
+        """
+        In-place subtraction with a scalar.
+
+        Args:
+            other: Scalar value to subtract from each component.
+        """
         self = self - other
 
     fn __isub__(mut self, other: Self):
+        """
+        In-place component-wise subtraction with another vector.
+
+        Args:
+            other: The other Vector3D to subtract.
+        """
         self = self - other
 
     fn __mul__(self, other: Scalar[Self.dtype]) -> Self:
@@ -478,18 +663,57 @@ struct Vector3D[dtype: DType = DType.float64](
         )
 
     fn __rmul__(self, other: Scalar[Self.dtype]) -> Self:
+        """
+        Right multiplication with a scalar (scalar * vector).
+
+        Args:
+            other: Scalar multiplier.
+
+        Returns:
+            A new Vector3D scaled by `other`.
+        """
         return self * other
 
     fn __rmul__(self, other: Self) -> Self:
+        """
+        Right multiplication with another vector (component-wise).
+
+        Args:
+            other: The other Vector3D.
+
+        Returns:
+            A new Vector3D with component-wise products.
+        """
         return self * other
 
     fn __imul__(mut self, other: Scalar[Self.dtype]):
+        """
+        In-place multiplication with a scalar.
+
+        Args:
+            other: Scalar multiplier.
+        """
         self = self * other
 
     fn __imul__(mut self, other: Self):
+        """
+        In-place component-wise multiplication with another vector.
+
+        Args:
+            other: The other Vector3D.
+        """
         self = self * other
 
     fn __pow__(self, p: Int) -> Self:
+        """
+        Raise each component to a power.
+
+        Args:
+            p: The exponent (integer power).
+
+        Returns:
+            A new Vector3D with each component raised to power `p`.
+        """
         return Self(
             self._x**p,
             self._y**p,
@@ -497,6 +721,12 @@ struct Vector3D[dtype: DType = DType.float64](
         )
 
     fn __ipow__(mut self, p: Int):
+        """
+        In-place exponentiation of each component.
+
+        Args:
+            p: The exponent (integer power).
+        """
         self = self.__pow__(p)
 
     fn __truediv__(self, other: Scalar[Self.dtype]) raises -> Self:
@@ -542,15 +772,57 @@ struct Vector3D[dtype: DType = DType.float64](
         )
 
     fn __rtruediv__(self, other: Scalar[Self.dtype]) raises -> Self:
+        """
+        Right division with a scalar (scalar / vector).
+
+        Args:
+            other: Scalar dividend.
+
+        Raises:
+            Error: If any component is zero.
+
+        Returns:
+            A new Vector3D representing the scaled division.
+        """
         return self.__truediv__(other)
 
     fn __rtruediv__(self, other: Self) raises -> Self:
+        """
+        Right division with another vector (component-wise).
+
+        Args:
+            other: The vector dividend.
+
+        Raises:
+            Error: If any component is zero.
+
+        Returns:
+            A new Vector3D representing the component-wise division.
+        """
         return self.__truediv__(other)
 
     fn __itruediv__(mut self, other: Scalar[Self.dtype]) raises:
+        """
+        In-place division by a scalar.
+
+        Args:
+            other: Scalar divisor.
+
+        Raises:
+            Error: If `other` is zero.
+        """
         self = self.__truediv__(other)
 
     fn __itruediv__(mut self, other: Self) raises:
+        """
+        In-place component-wise division by another vector.
+
+        Args:
+            other: The vector divisor (component-wise).
+
+        Raises:
+            Error: If any component of `other` is zero.
+        """
         self = self.__truediv__(other)
 
     fn distance(mut self, other: Vector3D[Self.dtype]) -> Scalar[Self.dtype]:
