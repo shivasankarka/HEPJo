@@ -18,14 +18,14 @@ build = "mojo build"
 package = "mojo package hepjo"
 
 [package]
-name = "scijo"
+name = "hepjo"
 version = "0.1.0"
 
 [package.build]
 backend = { name = "pixi-build-mojo", version = "0.*"}
 
 [package.build.config.pkg]
-name = "scijo"
+name = "hepjo"
 
 [package.host-dependencies]
 modular = ">=26.1.0.dev2026010305,<27"
