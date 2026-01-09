@@ -1,22 +1,21 @@
 # Traits
-
-
+# If we decide to combine vectors in future with traits.
 trait vectors:
     """Default constructor."""
 
     @always_inline("nodebug")
-    fn __init__(inout self):
+    fn __init__(out self):
         """
         Initializes a 3D vector with zero elements.
         """
-        pass
+        ...
 
     fn __len__(self) -> Int:
-        pass
+        ...
 
     fn __str__(self) -> String:
-        pass
+        ...
 
     fn print(self) raises -> None:
         """Prints the Vector3D."""
-        pass
+        ...

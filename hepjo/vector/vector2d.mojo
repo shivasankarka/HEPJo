@@ -1,15 +1,4 @@
-# Defaults
-from builtin.dtype import DType
-from builtin.type_aliases import Origin
-from memory import UnsafePointer
-from memory import memset_zero, memcpy
-from sys import simdwidthof
-
-from collections.vector import InlinedFixedVector
-from algorithm import vectorize
-
 from math import sqrt, acos, atan2, sinh, log, sin, cos, tan
-import . math_funcs as mf
 
 # Modules
 from ..constants import pi
@@ -19,104 +8,104 @@ from ..constants import pi
 ################################################################################################################
 
 
-@value
+# ===----------------------------------------------------------------------===#
+# FORMAT FOR DOCSTRING (See "Mojo docstring style guide" for more information)
+# 1. Description *
+# 2. Parameters *
+# 3. Args *
+# 4. Constraints *
+# 4) Returns *
+# 5) Raises *
+# 6) SEE ALSO
+# 7) NOTES
+# 8) REFERENCES
+# 9) Examples *
+# (Items marked with * are flavored in "Mojo docstring style guide")
+# ===----------------------------------------------------------------------===#
+
+# TODO: Add where constraints to dtype.
 struct Vector2D[dtype: DType = DType.float64](
-    Stringable, Representable, CollectionElement, Sized, Writable
+    Representable, Sized, Stringable, Writable, ImplicitlyCopyable
 ):
-    # Fields
-    var _buf: UnsafePointer[Scalar[dtype]]
-    """2D vector data."""
-    alias size: Int = 2
+    # Aliases
+    comptime size: Int = 2
     """The size of the Vector."""
 
-    """ LIFETIME METHODS """
+    # Fields
+    var _x: Scalar[Self.dtype]
+    """The x-component of the vector."""
+    var _y: Scalar[Self.dtype]
+    """The y-component of the vector."""
+    # """2D vector data."""
 
-    fn __init__(mut self):
+    # """LIFETIME METHODS."""
+    @always_inline("nodebug")
+    fn __init__(out self) :
         """
         Initializes a 2D vector with zero elements.
         """
-        self._buf = UnsafePointer[Scalar[dtype]].alloc(self.size)
-        memset_zero(self._buf, self.size)
+        self._x = 0
+        self._y = 0
 
-    fn __init__(mut self, data: Scalar[dtype]) raises:
+    @always_inline("nodebug")
+    fn __init__(out self, data: Scalar[Self.dtype]) raises :
         """
         Initializes a 2D vector with the given elements.
         """
-        self._buf = UnsafePointer[Scalar[dtype]].alloc(self.size)
-        memset_zero(self._buf, self.size)
-        for i in range(self.size):
-            self._buf[i] = data
+        self._x = data
+        self._y = data
 
-    fn __init__(mut self, *data: Scalar[dtype]) raises:
-        """
-        Initializes a 2D vector with the given elements.
-        """
-        if len(data) != self.size:
-            raise Error("Length of input should be 2")
-        self._buf = UnsafePointer[Scalar[dtype]].alloc(self.size)
-        memset_zero(self._buf, self.size)
-        for i in range(self.size):
-            self._buf[i] = data[i]
-
-    fn __init__(mut self, data: List[Scalar[dtype]]) raises:
+    @always_inline("nodebug")
+    fn __init__(out self, data: List[Scalar[Self.dtype]]) raises :
         """
         Initializes a 2D vector with the given List of elements.
         """
         if len(data) != self.size:
             raise Error("Length of input should be 2")
-        self._buf = UnsafePointer[Scalar[dtype]].alloc(self.size)
-        memset_zero(self._buf, self.size)
-        for i in range(self.size):
-            self._buf[i] = data[i]
+        self._x = data[0]
+        self._y = data[1]
 
-    fn __init__(mut self, x: Scalar[dtype], y: Scalar[dtype]):
+    @always_inline("nodebug")
+    fn __init__(out self, x: Scalar[Self.dtype], y: Scalar[Self.dtype]) :
         """
         Initializes a 2D vector with the given elements.
         """
-        self._buf = UnsafePointer[Scalar[dtype]].alloc(self.size)
-        self._buf[0] = x
-        self._buf[1] = y
+        self._x = x
+        self._y = y
 
-    fn __init__(mut self, vector: Vector2D[dtype]):
+    @always_inline("nodebug")
+    fn __init__(out self, vector: Vector2D[Self.dtype]) :
         """
         Initializes a 2D vector with the given elements.
         """
-        self._buf = UnsafePointer[Scalar[dtype]].alloc(self.size)
-        self._buf[0] = vector._buf[0]
-        self._buf[1] = vector._buf[1]
+        self._x = vector._x
+        self._y = vector._y
 
-    fn __copyinit__(out self, other: Vector2D[dtype]):
+    fn __copyinit__(out self, other: Vector2D[Self.dtype]):
         """
         Initializes a 3D vector as a copy of another vector.
         """
-        self._buf = UnsafePointer[Scalar[dtype]].alloc(self.size)
-        memcpy(self._buf, other._buf, self.size)
+        self._x = other._x
+        self._y = other._y
 
-    fn __moveinit__(mut self, owned other: Vector2D[dtype]):
-        """
-        Initializes a 3D vector by moving the data from another vector.
-        """
-        self._buf = other._buf
-
-    fn __del__(owned self):
-        self._buf.free()
-
-    """ GETTER & SETTER METHODS """
-
-    fn __getitem__(self, index: Int) raises -> Scalar[dtype]:
+    # """GETTER & SETTER METHODS."""
+    fn __getitem__(self, index: Int) raises -> Scalar[Self.dtype]:
         if index >= 2:
             raise Error("Invalid index: index exceeds size")
-        elif index < 0:
-            return self._buf[index + self.size]
-        else:
-            return self._buf[index]
+        if index == 0:
+            return self._x
+        elif index == 1:
+            return self._y
 
-    fn __setitem__(mut self, index: Int, value: Scalar[dtype]) raises:
+    fn __setitem__(mut self, index: Int, value: Scalar[Self.dtype]) raises:
         if index >= 2:
             raise Error("Invalid index: index exceeds size")
-        self._buf[index] = value
+        if index == 0:
+            self._x = value
+        elif index == 1:
+            self._y = value
 
-    # TRAITS ###
+    ### TRAITS ###
     fn __str__(self) -> String:
         """
         To print the 2D vector.
@@ -127,12 +116,12 @@ struct Vector2D[dtype: DType = DType.float64](
         try:
             var printStr: String = "Vector2D: ["
             for i in range(self.size):
-                printStr += str(self[i])
+                printStr += String(self[i])
                 if i != 1:
                     printStr += " , "
 
             printStr += "]" + "\n"
-            printStr += "dtype=" + str(dtype)
+            printStr += "dtype=" + String(Self.dtype)
             writer.write(printStr)
         except e:
             writer.write("Cannot convert array to string")
@@ -146,11 +135,11 @@ struct Vector2D[dtype: DType = DType.float64](
         """Compute the "official" string representation of Vector2D."""
         return (
             "Vector2D[DType."
-            + str(dtype)
+            + String(Self.dtype)
             + "](x="
-            + str(self._buf[0])
+            + String(self._x)
             + ", y="
-            + str(self._buf[1])
+            + String(self._y)
             + ")"
         )
 
@@ -158,7 +147,7 @@ struct Vector2D[dtype: DType = DType.float64](
         """Returns the length of the Vector2D (=2)."""
         return self.size
 
-    fn __iter__(self) raises -> _vector2DIter[__origin_of(self), dtype]:
+    fn __iter__(self) raises -> _vector2DIter[origin_of(self), Self.dtype]:
         """Iterate over elements of the Vector2D, returning copied value.
 
         Returns:
@@ -168,14 +157,14 @@ struct Vector2D[dtype: DType = DType.float64](
             Need to add lifetimes after the new release.
         """
 
-        return _vector2DIter[__origin_of(self), dtype](
+        return _vector2DIter[origin_of(self), Self.dtype](
             array=self,
             length=self.size,
         )
 
     fn __reversed__(
         self,
-    ) raises -> _vector2DIter[__origin_of(self), dtype, forward=False]:
+    ) raises -> _vector2DIter[origin_of(self), Self.dtype, forward=False]:
         """Iterate backwards over elements of the Vector2D, returning
         copied value.
 
@@ -183,295 +172,255 @@ struct Vector2D[dtype: DType = DType.float64](
             A reversed iterator of Vector2D elements.
         """
 
-        return _vector2DIter[__origin_of(self), dtype, forward=False](
+        return _vector2DIter[origin_of(self), Self.dtype, forward=False](
             array=self,
             length=self.size,
         )
 
     fn typeof(mut self) -> DType:
-        return dtype
+        return Self.dtype
 
     fn typeof_str(mut self) -> String:
-        return dtype.__str__()
+        return Self.dtype.__str__()
 
-    """COMPARISIONS."""
+    # """COMPARISIONS."""
 
     @always_inline("nodebug")
     fn __eq__(self, other: Self) raises -> Vector2D[DType.bool]:
         """
         Itemwise equivalence.
         """
-        var result: Vector2D[DType.bool] = Vector2D[DType.bool]()
-        mf.compare_2_vectors[self.size, dtype, SIMD.__eq__](
-            self._buf, other._buf, result._buf
+        return Vector2D[DType.bool](
+            self._x == other._x, self._y == other._y
         )
-        return result
 
     @always_inline("nodebug")
-    fn __eq__(self, other: Scalar[dtype]) raises -> Vector2D[DType.bool]:
+    fn __eq__(self, other: Scalar[Self.dtype]) raises -> Vector2D[DType.bool]:
         """
         Itemwise equivalence between scalar and Array.
         """
-        var result: Vector2D[DType.bool] = Vector2D[DType.bool]()
-        mf.compare_vector_and_scalar[self.size, dtype, SIMD.__eq__](
-            self._buf, other, result._buf
+        return Vector2D[DType.bool](
+            self._x == other, self._y == other
         )
-        return result
 
     @always_inline("nodebug")
-    fn __ne__(self, other: Vector2D[dtype]) raises -> Vector2D[DType.bool]:
+    fn __ne__(self, other: Self) raises -> Vector2D[DType.bool]:
         """
         Itemwise nonequivelence between scalar and Array.
         """
-        var result: Vector2D[DType.bool] = Vector2D[DType.bool]()
-        mf.compare_2_vectors[self.size, dtype, SIMD.__ne__](
-            self._buf, other._buf, result._buf
+        return Vector2D[DType.bool](
+            self._x != other._x, self._y != other._y
         )
-        return result
 
     @always_inline("nodebug")
-    fn __ne__(self, other: Scalar[dtype]) raises -> Vector2D[DType.bool]:
+    fn __ne__(self, other: Scalar[Self.dtype]) raises -> Vector2D[DType.bool]:
         """
         Itemwise nonequivelence.
         """
-        var result: Vector2D[DType.bool] = Vector2D[DType.bool]()
-        mf.compare_vector_and_scalar[self.size, dtype, SIMD.__ne__](
-            self._buf, other, result._buf
+        return Vector2D[DType.bool](
+            self._x != other, self._y != other
         )
-        return result
 
     @always_inline("nodebug")
-    fn __lt__(self, other: Vector2D[dtype]) raises -> Vector2D[DType.bool]:
+    fn __lt__(self, other: Self) raises -> Vector2D[DType.bool]:
         """
         Itemwise less than between scalar and Array.
         """
-        var result: Vector2D[DType.bool] = Vector2D[DType.bool]()
-        mf.compare_2_vectors[self.size, dtype, SIMD.__lt__](
-            self._buf, other._buf, result._buf
+        return Vector2D[DType.bool](
+            self._x < other._x, self._y < other._y
         )
-        return result
 
     @always_inline("nodebug")
-    fn __lt__(self, other: Scalar[dtype]) raises -> Vector2D[DType.bool]:
+    fn __lt__(self, other: Scalar[Self.dtype]) raises -> Vector2D[DType.bool]:
         """
         Itemwise less than.
         """
-        var result: Vector2D[DType.bool] = Vector2D[DType.bool]()
-        mf.compare_vector_and_scalar[self.size, dtype, SIMD.__lt__](
-            self._buf, other, result._buf
+        return Vector2D[DType.bool](
+            self._x < other, self._y < other
         )
-        return result
 
     @always_inline("nodebug")
-    fn __le__(self, other: Vector2D[dtype]) raises -> Vector2D[DType.bool]:
+    fn __le__(self, other: Self) raises -> Vector2D[DType.bool]:
         """
         Itemwise less than or equal to between scalar and Array.
         """
-        var result: Vector2D[DType.bool] = Vector2D[DType.bool]()
-        mf.compare_2_vectors[self.size, dtype, SIMD.__le__](
-            self._buf, other._buf, result._buf
+        return Vector2D[DType.bool](
+            self._x <= other._x, self._y <= other._y
         )
-        return result
 
     @always_inline("nodebug")
-    fn __le__(self, other: Scalar[dtype]) raises -> Vector2D[DType.bool]:
+    fn __le__(self, other: Scalar[Self.dtype]) raises -> Vector2D[DType.bool]:
         """
         Itemwise less than or equal to.
         """
-        var result: Vector2D[DType.bool] = Vector2D[DType.bool]()
-        mf.compare_vector_and_scalar[self.size, dtype, SIMD.__le__](
-            self._buf, other, result._buf
+        return Vector2D[DType.bool](
+            self._x <= other, self._y <= other
         )
-        return result
 
     @always_inline("nodebug")
-    fn __gt__(self, other: Vector2D[dtype]) raises -> Vector2D[DType.bool]:
+    fn __gt__(self, other: Self) raises -> Vector2D[DType.bool]:
         """
         Itemwise greater than between scalar and Array.
         """
-        var result: Vector2D[DType.bool] = Vector2D[DType.bool]()
-        mf.compare_2_vectors[self.size, dtype, SIMD.__gt__](
-            self._buf, other._buf, result._buf
+        return Vector2D[DType.bool](
+            self._x > other._x, self._y > other._y
         )
-        return result
 
     @always_inline("nodebug")
-    fn __gt__(self, other: Scalar[dtype]) raises -> Vector2D[DType.bool]:
+    fn __gt__(self, other: Scalar[Self.dtype]) raises -> Vector2D[DType.bool]:
         """
         Itemwise greater than.
         """
-        var result: Vector2D[DType.bool] = Vector2D[DType.bool]()
-        mf.compare_vector_and_scalar[self.size, dtype, SIMD.__gt__](
-            self._buf, other, result._buf
+        return Vector2D[DType.bool](
+            self._x > other, self._y > other
         )
-        return result
 
     @always_inline("nodebug")
-    fn __ge__(self, other: Vector2D[dtype]) raises -> Vector2D[DType.bool]:
+    fn __ge__(self, other: Self) raises -> Vector2D[DType.bool]:
         """
         Itemwise less than or equal to between scalar and Array.
         """
-        var result: Vector2D[DType.bool] = Vector2D[DType.bool]()
-        mf.compare_2_vectors[self.size, dtype, SIMD.__ge__](
-            self._buf, other._buf, result._buf
+        return Vector2D[DType.bool](
+            self._x >= other._x, self._y >= other._y
         )
-        return result
 
     @always_inline("nodebug")
-    fn __ge__(self, other: Scalar[dtype]) raises -> Vector2D[DType.bool]:
+    fn __ge__(self, other: Scalar[Self.dtype]) raises -> Vector2D[DType.bool]:
         """
         Itemwise greater than or equal to.
         """
-        var result: Vector2D[DType.bool] = Vector2D[DType.bool]()
-        mf.compare_vector_and_scalar[self.size, dtype, SIMD.__ge__](
-            self._buf, other, result._buf
+        return Vector2D[DType.bool](
+            self._x >= other, self._y >= other
         )
-        return result
 
-    """ARITHMETIC."""
+    # """ARITHMETIC."""
 
     fn __pos__(self) raises -> Self:
         """
         Unary positve returens self unless boolean type.
         """
-        return self * Scalar[dtype](1)
+        return self
 
     fn __neg__(self) raises -> Self:
         """
         Unary negative returens self unless boolean type.
         """
-        return self * Scalar[dtype](-1)
+        return self * Scalar[Self.dtype](-1)
 
-    fn __add__(self, other: Scalar[dtype]) -> Self:
-        var result: Self = Self()
-        mf.elementwise_scalar_arithmetic[self.size, dtype, SIMD.__add__](
-            self._buf, other, result._buf
+    fn __add__(self, other: Scalar[Self.dtype])  -> Self:
+        return Self(
+            self._x + other,
+            self._y + other,
         )
-        return result^
 
-    fn __add__(self, other: Self) -> Self:
-        var result: Self = Self()
-        mf.elementwise_array_arithmetic[self.size, dtype, SIMD.__add__](
-            self._buf, other._buf, result._buf
+    fn __add__(self, other: Self)  -> Self:
+        return Self(
+            self._x + other._x,
+            self._y + other._y,
         )
-        return result^
 
-    fn __radd__(mut self, other: Scalar[dtype]) -> Self:
+    fn __radd__(mut self, other: Scalar[Self.dtype]) -> Self:
         return self + other
 
     fn __radd__(self, other: Self) -> Self:
         return self + other
 
-    fn __iadd__(mut self, other: Scalar[dtype]):
+    fn __iadd__(mut self, other: Scalar[Self.dtype]):
         self = self + other
 
     fn __iadd__(mut self, other: Self):
         self = self + other
 
-    fn __sub__(self, other: Scalar[dtype]) -> Self:
-        var result: Self = Self()
-        mf.elementwise_scalar_arithmetic[self.size, dtype, SIMD.__sub__](
-            self._buf, other, result._buf
+    fn __sub__(self, other: Scalar[Self.dtype]) -> Self:
+        return Self(
+            self._x - other,
+            self._y - other,
         )
-        return result^
 
     fn __sub__(self, other: Self) -> Self:
-        var result: Self = Self()
-        mf.elementwise_array_arithmetic[self.size, dtype, SIMD.__sub__](
-            self._buf, other._buf, result._buf
+        return Self(
+            self._x - other._x,
+            self._y - other._y,
         )
-        return result^
 
-    fn __rsub__(self, other: Scalar[dtype]) raises -> Self:
+    fn __rsub__(self, other: Scalar[Self.dtype]) raises -> Self:
         return -(self - other)
 
     fn __rsub__(self, other: Self) raises -> Self:
         return -(self - other)
 
-    fn __isub__(mut self, other: Scalar[dtype]):
+    fn __isub__(mut self, other: Scalar[Self.dtype]):
         self = self - other
 
     fn __isub__(mut self, other: Self):
         self = self - other
 
-    fn __mul__(self, other: Scalar[dtype]) -> Self:
-        var result: Self = Self()
-        mf.elementwise_scalar_arithmetic[self.size, dtype, SIMD.__mul__](
-            self._buf, other, result._buf
+    fn __mul__(self, other: Scalar[Self.dtype]) -> Self:
+        return Self(
+            self._x * other,
+            self._y * other,
         )
-        return result^
 
     fn __mul__(self, other: Self) -> Self:
-        var result: Self = Self()
-        mf.elementwise_array_arithmetic[self.size, dtype, SIMD.__mul__](
-            self._buf, other._buf, result._buf
+        return Self(
+            self._x * other._x,
+            self._y * other._y,
         )
-        return result^
 
-    fn __rmul__(self, other: Scalar[dtype]) -> Self:
+    fn __rmul__(self, other: Scalar[Self.dtype]) -> Self:
         return self * other
 
     fn __rmul__(self, other: Self) -> Self:
         return self * other
 
-    fn __imul__(mut self, other: Scalar[dtype]):
+    fn __imul__(mut self, other: Scalar[Self.dtype]):
         self = self * other
 
     fn __imul__(mut self, other: Self):
         self = self * other
 
     fn __pow__(self, p: Int) -> Self:
-        return self._elementwise_pow(p)
+        return Self(
+            self._x ** p,
+            self._y ** p,
+        )
 
     fn __ipow__(mut self, p: Int):
         self = self.__pow__(p)
 
-    fn _elementwise_pow(self, p: Int) -> Self:
-        alias simd_width: Int = simdwidthof[dtype]()
-        var new_vec = Self()
-
-        @parameter
-        fn tensor_scalar_vectorize[simd_width: Int](idx: Int) -> None:
-            new_vec._buf.store(idx, pow(self._buf.load(idx), p))
-
-        vectorize[tensor_scalar_vectorize, simd_width](self.size)
-        return new_vec
-
-    fn __truediv__(self, other: Scalar[dtype]) -> Self:
-        var result: Self = Self()
-        mf.elementwise_scalar_arithmetic[self.size, dtype, SIMD.__truediv__](
-            self._buf, other, result._buf
+    fn __truediv__(self, other: Scalar[Self.dtype]) raises -> Self:
+        if other == 0.0:
+            raise Error("Error: Division by zero in Vector2D.__truediv__")
+        return Self(
+            self._x / other,
+            self._y / other,
         )
-        return result^
 
-    fn __truediv__(self, other: Self) -> Self:
-        var result: Self = Self()
-        mf.elementwise_array_arithmetic[self.size, dtype, SIMD.__truediv__](
-            self._buf, other._buf, result._buf
+    fn __truediv__(self, other: Self) raises -> Self:
+        if other._x == 0.0 or other._y == 0.0:
+            raise Error("Error: Division by zero in Vector2D.__truediv__")
+        return Self(
+            self._x / other._x,
+            self._y / other._y,
         )
-        return result^
 
-    fn __rtruediv__(self, other: Scalar[dtype]) -> Self:
+    fn __rtruediv__(self, other: Scalar[Self.dtype]) raises -> Self:
         return self.__truediv__(other)
 
-    fn __rtruediv__(self, other: Self) -> Self:
+    fn __rtruediv__(self, other: Self) raises-> Self:
         return self.__truediv__(other)
 
-    fn __itruediv__(mut self, other: Scalar[dtype]):
+    fn __itruediv__(mut self, other: Scalar[Self.dtype]) raises:
         self = self.__truediv__(other)
 
-    fn __itruediv__(mut self, other: Self):
+    fn __itruediv__(mut self, other: Self) raises:
         self = self.__truediv__(other)
 
     # * since "*" already does element wise calculation, I think matmul is redundant for 1D array, but I could use it for dot products
-    fn __matmul__(mut self, other: Self) -> Scalar[dtype]:
-        var result: Scalar[dtype] = 0.0
-        mf.elementwise_array_arithmetic[self.size, dtype, SIMD.__mul__](
-            self._buf, other._buf, result
-        )
-        return result
+    fn __matmul__(mut self, other: Self) -> Scalar[Self.dtype]:
+        return self.dot(other)
 
-    fn distance(self, other: Vector2D[dtype]) -> Scalar[dtype]:
+    fn distance(self, other: Self) -> Scalar[Self.dtype]:
         """
         Calculates the Euclidean distance between two vectors.
 
@@ -489,7 +438,7 @@ struct Vector2D[dtype: DType = DType.float64](
         return Self(0.0, 0.0)
 
     @staticmethod
-    fn frompoint(x: Scalar[dtype], y: Scalar[dtype]) -> Self:
+    fn frompoint(x: Scalar[Self.dtype], y: Scalar[Self.dtype]) -> Self:
         return Self(x, y)
 
     @staticmethod
@@ -497,83 +446,85 @@ struct Vector2D[dtype: DType = DType.float64](
         return Self(v[0], v[1])
 
     @staticmethod
-    fn fromsphericalcoords(r: Scalar[dtype], phi: Scalar[dtype]) -> Self:
-        var x: Scalar[dtype] = r * cos(phi)
-        var y: Scalar[dtype] = r * sin(phi)
+    fn fromsphericalcoords(
+        r: Scalar[Self.dtype], phi: Scalar[Self.dtype]
+    ) -> Self:
+        var x: Scalar[Self.dtype] = r * cos(phi)
+        var y: Scalar[Self.dtype] = r * sin(phi)
         return Self(x, y)
 
     @staticmethod
     fn fromcylindricalcoodinates(
-        rho: Scalar[dtype], phi: Scalar[dtype]
+        rho: Scalar[Self.dtype], phi: Scalar[Self.dtype]
     ) -> Self:
-        var x: Scalar[dtype] = rho * cos(phi)
-        var y: Scalar[dtype] = rho * sin(phi)
+        var x: Scalar[Self.dtype] = rho * cos(phi)
+        var y: Scalar[Self.dtype] = rho * sin(phi)
         return Self(x, y)
 
     @staticmethod
-    fn fromlist(iterable: List[Scalar[dtype]]) raises -> Self:
+    fn fromlist(iterable: List[Scalar[Self.dtype]]) raises -> Self:
         if len(iterable) == 2:
             return Self(iterable[0], iterable[1])
         else:
             raise Error("Error: Length of iterable must be 2")
 
     # * PROPERTIES
-    fn x(mut self, x: Scalar[dtype]):
+    fn x(mut self, x: Scalar[Self.dtype]):
         """
         Sets the x-component of the vector.
 
         Args:
             x: The new value for the x-component.
         """
-        self._buf[0] = x
+        self._x = x
 
-    fn x(self) -> Scalar[dtype]:
+    fn x(self) -> Scalar[Self.dtype]:
         """
         Returns the x-component of the vector.
 
         Returns:
             The value of the x-component.
         """
-        return self._buf[0]
+        return self._x
 
-    fn y(mut self, y: Scalar[dtype]):
+    fn y(mut self, y: Scalar[Self.dtype]):
         """
         Sets the y-component of the vector.
 
         Args:
             y: The new value for the y-component.
         """
-        self._buf[1] = y
+        self._y = y
 
-    fn y(self) -> Scalar[dtype]:
+    fn y(self) -> Scalar[Self.dtype]:
         """
         Returns the y-component of the vector.
 
         Returns:
             The value of the y-component.
         """
-        return self._buf[1]
+        return self._y
 
     # TODO: Implement @property decorator
-    fn rho(self) -> Scalar[dtype]:
+    fn rho(self) -> Scalar[Self.dtype]:
         """
         Calculates the radial distance in the xy-plane (rho).
 
         Returns:
             The radial distance rho, calculated as sqrt(x^2 + y^2).
         """
-        return sqrt(self._buf[0] ** 2 + self._buf[1] ** 2)
+        return sqrt(self._x ** 2 + self._y ** 2)
 
-    fn mag(self) -> Scalar[dtype]:
+    fn mag(self) -> Scalar[Self.dtype]:
         """
         Calculates the magnitude (or length) of the vector.
 
         Returns:
             The magnitude of the vector, calculated as sqrt(x^2 + y^2).
         """
-        return sqrt(self._buf[0] ** 2 + self._buf[1] ** 2)
+        return sqrt(self._x ** 2 + self._y ** 2)
 
-    fn r(self) -> Scalar[dtype]:
+    fn r(self) -> Scalar[Self.dtype]:
         """
         Alias for the magnitude of the vector.
 
@@ -582,7 +533,7 @@ struct Vector2D[dtype: DType = DType.float64](
         """
         return self.mag()
 
-    fn phi(self, degree: Bool = False) -> Scalar[dtype]:
+    fn phi(self, degree: Bool = False) -> Scalar[Self.dtype]:
         """
         Calculates the angle phi in the xy-plane from the positive x-axis.
 
@@ -592,13 +543,13 @@ struct Vector2D[dtype: DType = DType.float64](
         Returns:
             The angle phi in radians or degrees.
         """
-        var phi = atan2(self._buf[1], self._buf[0])
+        var phi = atan2(self._y, self._x)
         if degree == True:
-            return phi * 180 / pi.cast[dtype]()
+            return phi * 180 / pi.cast[Self.dtype]()
         else:
             return phi
 
-    fn set(self, x: Scalar[dtype], y: Scalar[dtype]):
+    fn set(mut self, x: Scalar[Self.dtype], y: Scalar[Self.dtype]):
         """
         Sets the vector components to the specified values.
 
@@ -606,28 +557,28 @@ struct Vector2D[dtype: DType = DType.float64](
             x: The new value for the x-component.
             y: The new value for the y-component.
         """
-        self._buf[0] = x
-        self._buf[1] = y
+        self._x = x
+        self._y = y
 
-    fn tolist(self) -> List[Scalar[dtype]]:
+    fn tolist(self) -> List[Scalar[Self.dtype]]:
         """
         Converts the vector components to a list.
 
         Returns:
             A list containing the scalar components of the vector.
         """
-        return List[Scalar[dtype]](self._buf[0], self._buf[1])
+        return [Scalar[Self.dtype](self._x), self._y]
 
-    fn mag2(self) -> Scalar[dtype]:
+    fn mag2(self) -> Scalar[Self.dtype]:
         """
         Calculates the squared magnitude of the vector.
 
         Returns:
             The squared magnitude of the vector.
         """
-        return self._buf[0] ** 2 + self._buf[1] ** 2
+        return self._x ** 2 + self._y ** 2
 
-    fn __abs__(self) -> Scalar[dtype]:
+    fn __abs__(self) -> Scalar[Self.dtype]:
         """
         Calculates the magnitude of the vector.
 
@@ -635,15 +586,6 @@ struct Vector2D[dtype: DType = DType.float64](
             The magnitude of the vector.
         """
         return self.mag()
-
-    fn copy(self) -> Self:
-        """
-        Creates a copy of the vector.
-
-        Returns:
-            A new instance of the vector with the same components.
-        """
-        return Self(self._buf[0], self._buf[1])
 
     fn unit(self) -> Self:
         """
@@ -656,7 +598,7 @@ struct Vector2D[dtype: DType = DType.float64](
         if mag_temp == 1.0:
             return self
         else:
-            return Self(self._buf[0] / mag_temp, self._buf[1] / mag_temp)
+            return Self(self._x / mag_temp, self._y / mag_temp)
 
     fn __nonzero__(self) -> Bool:
         """
@@ -676,7 +618,7 @@ struct Vector2D[dtype: DType = DType.float64](
         """
         return self.__nonzero__()
 
-    fn dot(self, other: Self) -> Scalar[dtype]:
+    fn dot(self, other: Self) -> Scalar[Self.dtype]:
         """
         Computes the dot product of this vector with another vector.
 
@@ -686,11 +628,9 @@ struct Vector2D[dtype: DType = DType.float64](
         Returns:
             The scalar dot product of the two vectors.
         """
-        return (
-            self._buf.load[width=2](0) * other._buf.load[width=2](0)
-        ).reduce_add()
+        return self._x * other._x + self._y * other._y
 
-    fn cross(self, other: Self) -> Scalar[dtype]:
+    fn cross(self, other: Self) -> Scalar[Self.dtype]:
         """
         Computes the cross product of this vector with another vector.
 
@@ -700,10 +640,10 @@ struct Vector2D[dtype: DType = DType.float64](
         Returns:
             A new vector that is the cross product of this vector and the other vector.
         """
-        return self._buf[0] * other._buf[1] - self._buf[1] * other._buf[0]
+        return self._x * other._y - self._y * other._x
 
     # TODO: Gotta check this function, It returns non sense values for now lol
-    fn rotate(self, angle: Scalar[dtype]) -> Self:
+    fn rotate(self, angle: Scalar[Self.dtype]) -> Self:
         """
         Rotates the vector by the specified angle.
 
@@ -716,23 +656,23 @@ struct Vector2D[dtype: DType = DType.float64](
         var cos_theta = cos(angle)
         var sin_theta = sin(angle)
 
-        var x_new = self._buf[0] * cos_theta - self._buf[1] * sin_theta
-        var y_new = self._buf[0] * sin_theta + self._buf[1] * cos_theta
+        var x_new =  self._x * cos_theta -  self._y * sin_theta
+        var y_new =  self._x * sin_theta +  self._y * cos_theta
 
         return Self(x_new, y_new)
 
-    fn rotate_z(mut self, angle: Scalar[dtype]):
+    fn rotate_z(mut self, angle: Scalar[Self.dtype]):
         """
         Rotates the vector around the Z-axis by the specified angle.
 
         Args:
             angle: The angle in radians by which to rotate the vector around the Z-axis.
         """
-        var x_new = self._buf[0] * cos(angle) - self._buf[1] * sin(angle)
-        var y_new = self._buf[0] * sin(angle) + self._buf[1] * cos(angle)
+        var x_new =  self._x * cos(angle) -  self._y * sin(angle)
+        var y_new =  self._x * sin(angle) +  self._y * cos(angle)
         self.set(x_new, y_new)
 
-    fn cos_angle(self, other: Self) -> Scalar[dtype]:
+    fn cos_angle(self, other: Self) -> Scalar[Self.dtype]:
         """
         Computes the cosine of the angle between this vector and another vector.
 
@@ -744,7 +684,7 @@ struct Vector2D[dtype: DType = DType.float64](
         """
         return self.dot(other) / (self.mag() * other.mag())
 
-    fn angle(self, other: Self) -> Scalar[dtype]:
+    fn angle(self, other: Self) -> Scalar[Self.dtype]:
         """
         Computes the angle in radians between this vector and another vector.
 
@@ -794,20 +734,20 @@ struct Vector2D[dtype: DType = DType.float64](
             function: A function that takes a SIMD type and returns a SIMD type, specifying the operation to be performed on each element.
 
         """
-        for i in range(self.size):
-            self._buf[i] = function(self._buf[i])[0]
+        self._x = function[Self.dtype, 1](self._x)
+        self._y = function[Self.dtype, 1](self._y)
 
 
 #####################################################################################
 
 
-@value
 struct _vector2DIter[
-    is_mutable: Bool, //,
-    lifetime: Origin[is_mutable],
+    is_mutable: Bool,
+    //,
+    lifetime: Origin[mut=is_mutable],
     dtype: DType,
     forward: Bool = True,
-]:
+](ImplicitlyCopyable):
     """Iterator for Vector2D.
 
     Parameters:
@@ -818,23 +758,23 @@ struct _vector2DIter[
     """
 
     var index: Int
-    var array: Vector2D[dtype]
-    alias length: Int = 2
+    var array: Vector2D[Self.dtype]
+    comptime length: Int = 2
 
     fn __init__(
-        mut self,
-        array: Vector2D[dtype],
+        out self,
+        array: Vector2D[Self.dtype],
         length: Int,
     ):
-        self.index = 0 if forward else length
+        self.index = 0 if Self.forward else length
         self.array = array
 
     fn __iter__(self) -> Self:
         return self
 
-    fn __next__(mut self) raises -> Scalar[dtype]:
+    fn __next__(mut self) raises -> Scalar[Self.dtype]:
         @parameter
-        if forward:
+        if Self.forward:
             var current_index = self.index
             self.index += 1
             return self.array[current_index]
@@ -846,14 +786,14 @@ struct _vector2DIter[
     @always_inline
     fn __has_next__(self) -> Bool:
         @parameter
-        if forward:
+        if Self.forward:
             return self.index < self.length
         else:
             return self.index > 0
 
     fn __len__(self) -> Int:
         @parameter
-        if forward:
+        if Self.forward:
             return self.length - self.index
         else:
             return self.index

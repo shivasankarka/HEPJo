@@ -1,0 +1,46 @@
+[workspace]
+authors = ["shivasankar <shivasankar.ka@gmail.com>"]
+channels = [
+    "https://conda.modular.com/max-nightly/",
+    "https://prefix.dev/conda-forge",
+    "https://prefix.dev/modular-community"
+]
+preview = ["pixi-build"]
+description = "HEPJo is a high-performance library for numerical computations in particle physics, written in Mojo 🔥 similar to Scikit-HEP in Python."
+name = "HEPJo"
+platforms = ["osx-arm64", "linux-64"]
+version = "0.1.0"
+
+[tasks]
+format = "mojo format ./"
+test = "mojo test -I . tests/"
+build = "mojo build"
+package = "mojo package hepjo"
+
+[package]
+name = "scijo"
+version = "0.1.0"
+
+[package.build]
+backend = { name = "pixi-build-mojo", version = "0.*"}
+
+[package.build.config.pkg]
+name = "scijo"
+
+[package.host-dependencies]
+modular = ">=26.1.0.dev2026010305,<27"
+
+[package.build-dependencies]
+modular = ">=26.1.0.dev2026010305,<27"
+# numojo = { git = "https://github.com/shivasankarka/NuMojo.git", branch = "main"}
+# numojo = { path = "/Users/shivasankar/Documents/Codes/NuMojo"}
+
+[package.run-dependencies]
+modular = ">=26.1.0.dev2026010305,<27"
+# numojo = { git = "https://github.com/shivasankarka/NuMojo.git", branch = "main"}
+# numojo = { path = "/Users/shivasankar/Documents/Codes/NuMojo"}
+
+[dependencies]
+modular = ">=26.1.0.dev2026010305,<27"
+# numojo = { git = "https://github.com/shivasankarka/NuMojo.git", branch = "pre-0.72"}
+# numojo = { path = "/Users/shivasankar/Documents/Codes/NuMojo/" }

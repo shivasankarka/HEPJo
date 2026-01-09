@@ -1,5 +1,6 @@
 from testing.testing import assert_true, assert_equal
 from hepjo import *
+from testing import TestSuite
 
 
 def test_constructor_1():
@@ -21,7 +22,7 @@ def test_constructor_3():
 
 
 def test_constructor_5():
-    var test1 = List[Scalar[i32]](1, 2, 3)
+    var test1 = [Scalar[i32](1), 2, 3]
     var test2 = Vector3D[i32](test1)
     for i in range(3):
         assert_true(test2[i] == i + 1, "default constructor failed")
@@ -32,10 +33,10 @@ def test_len():
     assert_true(len(test1) == 3, "__len__ doesn't work")
 
 
-def test_str():
+def test_String():
     var test1 = Vector3D[i32](1, 2, 3)
     assert_true(
-        str(test1) == "Vector3D: [1 , 2 , 3]" + "\n" + "dtype=int32",
+        String(test1) == "Vector3D: [1 , 2 , 3]" + "\n" + "dtype=int32",
         "__str__ doesn't work",
     )
 
@@ -58,9 +59,9 @@ def test_iter():
 
 def test_addition():
     var result = Vector3D[i32](1, 2, 3) + Vector3D[i32](4, 5, 6)
-    assert_equal[i32](result[0], 5, "addition failed at index 0")
-    assert_equal[i32](result[1], 7, "addition failed at index 1")
-    assert_equal[i32](result[2], 9, "addition failed at index 2")
+    assert_equal(result[0], 5, "addition failed at index 0")
+    assert_equal(result[1], 7, "addition failed at index 1")
+    assert_equal(result[2], 9, "addition failed at index 2")
 
 
 def test_subtraction():
@@ -145,38 +146,13 @@ def test_negative():
     assert_true(result[2] == -3, "negative failed at index 2")
 
 
-def test_load():
-    var vec = Vector3D[i32](1, 2, 3)
-    assert_true(vec.load[width=1](0) == 1, "load failed at index 0")
-    assert_true(vec.load[width=1](1) == 2, "load failed at index 1")
-    assert_true(vec.load[width=1](2) == 3, "load failed at index 2")
-
-
-def test_store():
-    var vec = Vector3D[i32](1, 2, 3)
-    vec.store(0, SIMD[i32, 1](4))
-    vec.store(1, SIMD[i32, 1](5))
-    vec.store(2, SIMD[i32, 1](6))
-    assert_true(vec[0] == 4, "store failed at index 0")
-    assert_true(vec[1] == 5, "store failed at index 1")
-    assert_true(vec[2] == 6, "store failed at index 2")
-
-
-def test_unsafe_ptr():
-    var vec = Vector3D[i32](1, 2, 3)
-    var result = vec.unsafe_ptr()
-    assert_true(result[0] == 1, "unsafe_ptr failed at index 0")
-    assert_true(result[1] == 2, "unsafe_ptr failed at index 1")
-    assert_true(result[2] == 3, "unsafe_ptr failed at index 2")
-
-
 def test_typeof():
     var vec = Vector3D[i32](1, 2, 3)
     var result = vec.typeof()
     assert_true(result == DType.int32, "typeof failed")
 
 
-def test_typeof_str():
+def test_typeof_String():
     var vec = Vector3D[i32](1, 2, 3)
     var result = vec.typeof_str()
     assert_true(result == "int32", "typeof_str failed")
@@ -234,3 +210,7 @@ def test_ge():
     assert_true(result[0] == True, "ge failed at index 0")
     assert_true(result[1] == True, "ge failed at index 1")
     assert_true(result[2] == True, "ge failed at index 2")
+
+
+def main():
+    TestSuite.discover_tests[__functions_in_module()]().run()

@@ -17,6 +17,7 @@ test/__init__.mojo
 .DS_Store
 settings.json
 
-
-
-test/hepjo.mojopkg
+*hepjo.mojopkg
+archive
+*gitignore
+kgen*
