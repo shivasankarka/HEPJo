@@ -89,12 +89,13 @@ struct Vector2D[dtype: DType = DType.float64](
         self._y = other._y
 
     # """GETTER & SETTER METHODS."""
+    # TODO: Fix the conditions and add negativ indexing.
     fn __getitem__(self, index: Int) raises -> Scalar[Self.dtype]:
         if index >= 2:
             raise Error("Invalid index: index exceeds size")
         if index == 0:
             return self._x
-        elif index == 1:
+        else:
             return self._y
 
     fn __setitem__(mut self, index: Int, value: Scalar[Self.dtype]) raises:

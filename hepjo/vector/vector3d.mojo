@@ -1110,7 +1110,7 @@ struct Vector3D[dtype: DType = DType.float64](
         """
         return self.mag()
 
-    fn unit(mut self) -> Self:
+    fn unit(self) -> Self:
         """
         Normalizes the vector to a unit vector.
 
